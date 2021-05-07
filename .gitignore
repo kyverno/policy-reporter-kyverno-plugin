@@ -1,0 +1,4 @@
+.deploy
+/config.yaml
+build
+/test.yaml

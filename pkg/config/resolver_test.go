@@ -1,0 +1,64 @@
+package config_test
+
+import (
+	"testing"
+
+	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/config"
+	"k8s.io/client-go/rest"
+)
+
+var testConfig = &config.Config{}
+
+func Test_ResolvePolicyClient(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	client1, err := resolver.PolicyClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	client2, err := resolver.PolicyClient()
+	if client1 != client2 {
+		t.Error("A second call resolver.PolicyClient() should return the cached first client")
+	}
+}
+
+func Test_ResolvePolicyStore(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	store1 := resolver.PolicyStore()
+	store2 := resolver.PolicyStore()
+	if store1 != store2 {
+		t.Error("A second call resolver.PolicyStore() should return the cached first store")
+	}
+}
+func Test_ResolvePolicyMapper(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	mapper1 := resolver.Mapper()
+	mapper2 := resolver.Mapper()
+	if mapper1 != mapper2 {
+		t.Error("A second call resolver.Mapper() should return the cached first mapper")
+	}
+}
+
+func Test_ResolveAPIServer(t *testing.T) {
+	resolver := config.NewResolver(testConfig, &rest.Config{})
+
+	server := resolver.APIServer()
+	if server == nil {
+		t.Error("Error: Should return API Server")
+	}
+}
+
+func Test_ResolveClientWithInvalidK8sConfig(t *testing.T) {
+	k8sConfig := &rest.Config{}
+	k8sConfig.Host = "invalid/url"
+
+	resolver := config.NewResolver(&config.Config{}, k8sConfig)
+
+	_, err := resolver.PolicyClient()
+	if err == nil {
+		t.Error("Error: 'host must be a URL or a host:port pair' was expected")
+	}
+}
