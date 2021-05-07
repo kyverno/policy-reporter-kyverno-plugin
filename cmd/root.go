@@ -12,9 +12,9 @@ import (
 func NewCLI() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "kyverno-plugin",
-		Short: "Generates PolicyReport Metrics and Send Results to different targets",
-		Long: `Generates Prometheus Metrics from PolicyReports, ClusterPolicyReports and PolicyReportResults.
-		Sends notifications to different targets like Grafana's Loki.`,
+		Short: "Generates Kyverno Policy Metrics",
+		Long: `Generates Prometheus Metrics from Kyveno Policies.
+		Creates REST APIs for Policies to use with other tools like Policy Reporter UI`,
 	}
 
 	rootCmd.AddCommand(newRunCMD())
