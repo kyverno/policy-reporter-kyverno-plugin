@@ -98,12 +98,19 @@ func (m *mapper) mapRule(rule map[string]interface{}) kyverno.Rule {
 	if validate, ok := rule["validate"]; ok {
 		r.Type = "validation"
 		r.ValidateMessage = validate.(map[string]interface{})["message"].(string)
+		return r
 	}
-	if _, ok := rule["mutate"]; ok {
-		r.Type = "mutation"
+	if generate, ok := rule["generate"]; ok {
+		if len(generate.(map[string]interface{})) > 0 {
+			r.Type = "generation"
+			return r
+		}
 	}
-	if _, ok := rule["generate"]; ok {
-		r.Type = "generation"
+	if mutate, ok := rule["mutate"]; ok {
+		if len(mutate.(map[string]interface{})) > 0 {
+			r.Type = "mutation"
+			return r
+		}
 	}
 
 	return r

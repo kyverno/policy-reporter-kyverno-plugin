@@ -47,6 +47,67 @@ spec:
   validationFailureAction: audit
 `
 
+var genPolicy = `
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  annotations:
+    pod-policies.kyverno.io/autogen-controllers: DaemonSet,Deployment,Job,StatefulSet,CronJob
+  creationTimestamp: "2021-03-31T14:51:14Z"
+  generation: 2
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: prod-env-deny-all-traffic
+  uid: 5c569b21-9e51-48a2-b7b1-0af0518119e0
+spec:
+  background: false
+  rules:
+  - generate:
+      data:
+        spec:
+          podSelector: {}
+          policyTypes:
+          - Ingress
+          - Egress
+      kind: NetworkPolicy
+      name: deny-all-traffic
+      namespace: '{{request.object.metadata.name}}'
+    match:
+      resources:
+        kinds:
+        - Namespace
+        selector:
+          matchLabels:
+            env: production
+    name: deny-all-traffic
+  validationFailureAction: audit
+`
+
+var mutPolicy = `
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  annotations:
+    pod-policies.kyverno.io/autogen-controllers: DaemonSet,Deployment,Job,StatefulSet,CronJob
+  name: add-env-label
+  uid: 139bd7d1-88d9-4a3c-8f4a-705067f59ee9
+spec:
+  background: true
+  rules:
+  - match:
+      resources:
+        kinds:
+        - Namespace
+        name: prod*
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          labels:
+            env: production
+    name: add production label
+  validationFailureAction: audit
+`
+
 func Test_MapPolicy(t *testing.T) {
 	obj := &unstructured.Unstructured{}
 	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -90,5 +151,35 @@ func Test_MapPolicy(t *testing.T) {
 	}
 	if rule.ValidateMessage != "HostPath volumes are forbidden. The fields spec.volumes[*].hostPath must not be set." {
 		t.Errorf("Expected Rule Message 'HostPath volumes are forbidden. The fields spec.volumes[*].hostPath must not be set.', go %s", rule.ValidateMessage)
+	}
+}
+
+func Test_MapGeneratePolicy(t *testing.T) {
+	obj := &unstructured.Unstructured{}
+	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	dec.Decode([]byte(genPolicy), nil, obj)
+
+	mapper := kubernetes.NewMapper()
+
+	pol := mapper.MapPolicy(obj.Object)
+
+	rule := pol.Rules[0]
+	if rule.Type != "generation" {
+		t.Errorf("Expected Rule Type 'generation', go %s", rule.Type)
+	}
+}
+
+func Test_MapMutatePolicy(t *testing.T) {
+	obj := &unstructured.Unstructured{}
+	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	dec.Decode([]byte(mutPolicy), nil, obj)
+
+	mapper := kubernetes.NewMapper()
+
+	pol := mapper.MapPolicy(obj.Object)
+
+	rule := pol.Rules[0]
+	if rule.Type != "mutation" {
+		t.Errorf("Expected Rule Type 'generation', go %s", rule.Type)
 	}
 }
