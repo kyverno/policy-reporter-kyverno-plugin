@@ -3,7 +3,7 @@
 
 ## Motivation
 
-This Plugin for [Policy Report](https://github.com/fjogeleit/policy-reporter) brings additional Kyverno specific information to the Policy Reporter UI. See what Policies in your Cluster exist, how they are configured and if there are any violations assiciated with them in a graphical UI.
+This Plugin for [Policy Reporter](https://github.com/fjogeleit/policy-reporter) brings additional Kyverno specific information to the Policy Reporter UI. See what Policies in your Cluster exist, how they are configured and if there are any violations assiciated with them in a graphical UI.
 
 ## Screenshots from Policy Reporter UI
 
