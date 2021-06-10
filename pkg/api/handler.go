@@ -27,3 +27,30 @@ func PolicyHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 		}
 	}
 }
+
+// HealthzHandler for the Liveness REST API
+func HealthzHandler(s *kyverno.PolicyStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+		policies := s.List()
+		if len(policies) == 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, `{ "error": "No Policies found" }`)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "{}")
+	}
+}
+
+// ReadyHandler for the Readiness REST API
+func ReadyHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "{}")
+	}
+}

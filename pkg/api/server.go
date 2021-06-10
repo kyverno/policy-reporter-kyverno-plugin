@@ -21,6 +21,8 @@ type httpServer struct {
 
 func (s *httpServer) registerHandler() {
 	s.mux.HandleFunc("/policies", Gzip(PolicyHandler(s.store)))
+	s.mux.HandleFunc("/healthz", HealthzHandler(s.store))
+	s.mux.HandleFunc("/ready", ReadyHandler())
 }
 
 func (s *httpServer) Start() error {
