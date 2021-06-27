@@ -1,21 +1,25 @@
 FROM golang:1.16-buster as builder
 
+ARG LD_FLAGS
+ARG TARGETPLATFORM
+
 WORKDIR /app
 COPY . .
 
 RUN go get -d -v \
     && go install -v
 
-RUN make build
+RUN export GOOS=$(echo ${TARGETPLATFORM} | cut -d / -f1) && \
+    export GOARCH=$(echo ${TARGETPLATFORM} | cut -d / -f2)
 
-FROM alpine:latest
+RUN go env
+
+RUN CGO_ENABLED=0 go build -ldflags="${LD_FLAGS}" -o /app/build/kyverno-plugin -v
+
+FROM scratch
 LABEL MAINTAINER "Frank Jogeleit <frank.jogeleit@gweb.de>"
 
 WORKDIR /app
-
-RUN apk add --update --no-cache ca-certificates
-
-RUN addgroup -S kyverno-plugin && adduser -u 1234 -S kyverno-plugin -G kyverno-plugin
 
 USER 1234
 
