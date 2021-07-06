@@ -94,7 +94,11 @@ func (m *mapper) MapPolicy(policy map[string]interface{}) kyverno.Policy {
 func (m *mapper) mapRule(rule map[string]interface{}) kyverno.Rule {
 	r := kyverno.Rule{}
 
-	r.Name = rule["name"].(string)
+	if name, ok := rule["name"]; ok {
+		if n, ok := name.(string); ok {
+			r.Name = n
+		}
+	}
 	if validate, ok := rule["validate"]; ok {
 		r.Type = "validation"
 

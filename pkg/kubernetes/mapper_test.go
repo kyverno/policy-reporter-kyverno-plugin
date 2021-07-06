@@ -62,7 +62,6 @@ spec:
       resources:
         kinds:
         - Pod
-    name: host-path
     validate:
       message:
       pattern:
@@ -204,8 +203,8 @@ func Test_MapMinPolicy(t *testing.T) {
 	if rule.Type != "validation" {
 		t.Errorf("Expected Rule Type 'validation', got %s", rule.Type)
 	}
-	if rule.Name != "host-path" {
-		t.Errorf("Expected Rule Name 'host-path', got %s", rule.Name)
+	if rule.Name != "" {
+		t.Errorf("Expected Rule Name is empty, got %s", rule.Name)
 	}
 	if rule.ValidateMessage != "" {
 		t.Errorf("Expected empty Rule Message, got %s", rule.ValidateMessage)
