@@ -1,7 +1,7 @@
 GO ?= go
 BUILD ?= build
 REPO ?= fjogeleit/policy-reporter-kyverno-plugin
-IMAGE_TAG ?= 0.3.0
+IMAGE_TAG ?= 0.3.1
 LD_FLAGS="-s -w"
 
 all: build
