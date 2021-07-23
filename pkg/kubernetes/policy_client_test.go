@@ -5,8 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kubernetes"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/watch"

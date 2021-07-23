@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/api"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kubernetes"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )

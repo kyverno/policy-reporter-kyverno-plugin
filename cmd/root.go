@@ -3,7 +3,7 @@ package cmd
 import (
 	"log"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/config"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

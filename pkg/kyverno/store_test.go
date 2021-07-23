@@ -3,8 +3,8 @@ package kyverno_test
 import (
 	"testing"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kubernetes"
-	report "github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
+	report "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 )

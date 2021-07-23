@@ -3,7 +3,7 @@ package metrics
 import (
 	"strconv"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"k8s.io/apimachinery/pkg/watch"

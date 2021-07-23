@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"gopkg.in/yaml.v2"
 )
 

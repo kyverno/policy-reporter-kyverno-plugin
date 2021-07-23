@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 )

@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/config"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 	"k8s.io/client-go/rest"
 )
 

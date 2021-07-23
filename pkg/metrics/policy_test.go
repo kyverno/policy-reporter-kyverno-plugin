@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kubernetes"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/metrics"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

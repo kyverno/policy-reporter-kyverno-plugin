@@ -1,4 +1,4 @@
-module github.com/fjogeleit/policy-reporter-kyverno-plugin
+module github.com/kyverno/policy-reporter-kyverno-plugin
 
 go 1.15
 
