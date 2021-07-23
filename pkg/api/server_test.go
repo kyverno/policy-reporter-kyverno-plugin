@@ -3,8 +3,8 @@ package api_test
 import (
 	"testing"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/api"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 )
 
 func Test_NewServer(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"flag"
 	"net/http"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/config"
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/pkg/metrics"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/rest"

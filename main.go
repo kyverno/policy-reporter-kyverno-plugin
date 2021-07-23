@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fjogeleit/policy-reporter-kyverno-plugin/cmd"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/cmd"
 )
 
 func main() {
