@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"flag"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/metrics"
@@ -43,11 +45,24 @@ func newRunCMD() *cobra.Command {
 
 			errorChan := make(chan error)
 
-			if c.API.Enabled {
-				go func() { errorChan <- resolver.APIServer().Start() }()
-			}
+			apiServer := resolver.APIServer()
 
-			go func() { errorChan <- client.StartWatching() }()
+			go func() {
+				for {
+					apiServer.Healthy()
+
+					err := client.StartWatching()
+					if err != nil {
+						log.Printf("[ERROR] %s\n", err.Error())
+
+						apiServer.Unhealthy()
+					}
+
+					time.Sleep(time.Second * 2)
+				}
+			}()
+
+			go func() { errorChan <- apiServer.Start() }()
 
 			go func() {
 				http.Handle("/metrics", promhttp.Handler())
@@ -62,7 +77,7 @@ func newRunCMD() *cobra.Command {
 	// For local usage
 	cmd.PersistentFlags().StringP("kubeconfig", "k", "", "absolute path to the kubeconfig file")
 	cmd.PersistentFlags().StringP("config", "c", "", "target configuration file")
-	cmd.PersistentFlags().IntP("apiPort", "a", 0, "http port for the optional rest api")
+	cmd.PersistentFlags().IntP("apiPort", "a", 8080, "http port for the rest api")
 
 	flag.Parse()
 

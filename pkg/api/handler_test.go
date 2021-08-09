@@ -71,14 +71,16 @@ func Test_PolicyReportAPI(t *testing.T) {
 }
 
 func Test_HealthzAPI(t *testing.T) {
-	t.Run("No Policies Respose", func(t *testing.T) {
+	t.Run("Unhealthy Respose", func(t *testing.T) {
 		req, err := http.NewRequest("GET", "/healthz", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 
+		healthy := false
+
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(api.HealthzHandler(kyverno.NewPolicyStore()))
+		handler := http.HandlerFunc(api.HealthzHandler(&healthy))
 
 		handler.ServeHTTP(rr, req)
 
@@ -86,7 +88,7 @@ func Test_HealthzAPI(t *testing.T) {
 			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 
-		expected := `{ "error": "No Policies found" }`
+		expected := `{ "error": "Service unhealthy" }`
 		if rr.Body.String() != expected {
 			t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
 		}
@@ -97,24 +99,10 @@ func Test_HealthzAPI(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		result := kyverno.Rule{
-			ValidateMessage: "validation error: requests and limits required. Rule autogen-check-for-requests-and-limits failed at path /spec/template/spec/containers/0/resources/requests/",
-			Name:            "autogen-check-for-requests-and-limits",
-		}
-
-		policy := kyverno.Policy{
-			Kind:              "Policy",
-			Name:              "require-ressources",
-			Namespace:         "test",
-			Rules:             []kyverno.Rule{result},
-			CreationTimestamp: time.Now(),
-		}
-
-		store := kyverno.NewPolicyStore()
-		store.Add(policy)
+		healthy := true
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(api.HealthzHandler(store))
+		handler := http.HandlerFunc(api.HealthzHandler(&healthy))
 
 		handler.ServeHTTP(rr, req)
 
