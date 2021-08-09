@@ -29,14 +29,14 @@ func PolicyHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 }
 
 // HealthzHandler for the Liveness REST API
-func HealthzHandler(s *kyverno.PolicyStore) http.HandlerFunc {
+func HealthzHandler(healthy *bool) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-		policies := s.List()
-		if len(policies) == 0 {
+		if *healthy == false {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprint(w, `{ "error": "No Policies found" }`)
+			fmt.Fprint(w, `{ "error": "Service unhealthy" }`)
 
 			return
 		}

@@ -14,6 +14,7 @@ type policyReportClient struct {
 	policyAPI PolicyAdapter
 	store     *kyverno.PolicyStore
 	callbacks []kyverno.PolicyCallback
+	errorChan chan error
 	mapper    Mapper
 	started   bool
 }
@@ -54,16 +55,18 @@ func (c *policyReportClient) StartWatching() error {
 	}
 
 	c.started = true
-	errorChan := make(chan error)
+	c.errorChan = make(chan error)
 	resultChan := make(chan watch.Event)
+	defer func() {
+		close(resultChan)
+	}()
 
 	go func() {
 		for {
 			result, err := c.policyAPI.WatchPolicies()
 			if err != nil {
 				c.started = false
-				close(resultChan)
-				errorChan <- err
+				c.errorChan <- errors.New("[Policy] " + err.Error())
 				return
 			}
 
@@ -78,8 +81,7 @@ func (c *policyReportClient) StartWatching() error {
 			result, err := c.policyAPI.WatchClusterPolicies()
 			if err != nil {
 				c.started = false
-				close(resultChan)
-				errorChan <- err
+				c.errorChan <- errors.New("[ClusterPolicy] " + err.Error())
 				return
 			}
 
@@ -98,7 +100,7 @@ func (c *policyReportClient) StartWatching() error {
 		}
 	}()
 
-	return <-errorChan
+	return <-c.errorChan
 }
 
 func (c *policyReportClient) executeHandler(e watch.EventType, pr kyverno.Policy) {
