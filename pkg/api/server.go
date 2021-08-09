@@ -11,7 +11,9 @@ import (
 type Server interface {
 	// Start the HTTP REST API
 	Start() error
+	// Healthy API Server Status update
 	Healthy()
+	// Unhealthy API Server Status update
 	Unhealthy()
 }
 
