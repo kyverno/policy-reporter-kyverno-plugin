@@ -3,12 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 )
 
-// PolicyHandler for the PolicyReport REST API
+// PolicyHandler for the Policy REST API
 func PolicyHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -29,19 +30,22 @@ func PolicyHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 }
 
 // HealthzHandler for the Liveness REST API
-func HealthzHandler(healthy *bool) http.HandlerFunc {
-
+func HealthzHandler(found map[string]bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-		if *healthy == false {
+		if len(found) == 0 {
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprint(w, `{ "error": "Service unhealthy" }`)
+
+			log.Println("[WARNING] - Healthz Check: No kyverno policy crds are found")
+
+			fmt.Fprint(w, `{ "error": "No policy CRDs found" }`)
 
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
+
 		fmt.Fprint(w, "{}")
 	}
 }

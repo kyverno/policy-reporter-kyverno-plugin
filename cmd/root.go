@@ -51,8 +51,16 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 		v.BindPFlag("kubeconfig", flag)
 	}
 
-	if flag := cmd.Flags().Lookup("apiPort"); flag != nil {
+	if flag := cmd.Flags().Lookup("port"); flag != nil {
 		v.BindPFlag("api.port", flag)
+	}
+
+	if flag := cmd.Flags().Lookup("rest-enabled"); flag != nil {
+		v.BindPFlag("rest.enabled", flag)
+	}
+
+	if flag := cmd.Flags().Lookup("metrics-enabled"); flag != nil {
+		v.BindPFlag("metrics.enabled", flag)
 	}
 
 	c := &config.Config{}

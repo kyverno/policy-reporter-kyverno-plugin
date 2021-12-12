@@ -11,16 +11,16 @@ import (
 
 // Mapper converts maps into report structs
 type Mapper interface {
-	// MapPolicy maps a map into a PolicyReport
-	MapPolicy(reportMap map[string]interface{}) kyverno.Policy
+	// MapPolicy maps a map into a Policy
+	MapPolicy(reportMap map[string]interface{}) *kyverno.Policy
 }
 
 type mapper struct{}
 
-func (m *mapper) MapPolicy(policy map[string]interface{}) kyverno.Policy {
-	r := kyverno.Policy{
+func (m *mapper) MapPolicy(policy map[string]interface{}) *kyverno.Policy {
+	r := &kyverno.Policy{
 		Kind:  policy["kind"].(string),
-		Rules: make([]kyverno.Rule, 0),
+		Rules: make([]*kyverno.Rule, 0),
 	}
 
 	metadata := policy["metadata"].(map[string]interface{})
@@ -59,11 +59,8 @@ func (m *mapper) MapPolicy(policy map[string]interface{}) kyverno.Policy {
 		}
 	}
 
-	creationTimestamp, err := m.mapCreationTime(policy)
-	if err == nil {
+	if creationTimestamp, err := m.mapCreationTime(policy); err == nil {
 		r.CreationTimestamp = creationTimestamp
-	} else {
-		r.CreationTimestamp = time.Now()
 	}
 
 	spec := policy["spec"].(map[string]interface{})
@@ -91,8 +88,8 @@ func (m *mapper) MapPolicy(policy map[string]interface{}) kyverno.Policy {
 	return r
 }
 
-func (m *mapper) mapRule(rule map[string]interface{}) kyverno.Rule {
-	r := kyverno.Rule{}
+func (m *mapper) mapRule(rule map[string]interface{}) *kyverno.Rule {
+	r := &kyverno.Rule{}
 
 	if name, ok := rule["name"]; ok {
 		if n, ok := name.(string); ok {
@@ -131,10 +128,10 @@ func (m *mapper) mapCreationTime(result map[string]interface{}) (time.Time, erro
 			return time.Parse("2006-01-02T15:04:05Z", created)
 		}
 
-		return time.Time{}, errors.New("No creationTimestamp provided")
+		return time.Time{}, errors.New("Missing creationTimestamp in Metadata")
 	}
 
-	return time.Time{}, errors.New("No metadata provided")
+	return time.Time{}, errors.New("Missing metadata")
 }
 
 // NewMapper creates an new Mapper instance

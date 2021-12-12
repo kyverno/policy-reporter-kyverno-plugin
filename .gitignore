@@ -2,3 +2,4 @@
 /config.yaml
 build
 /test.yaml
+coverage.out

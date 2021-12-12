@@ -1,8 +1,6 @@
-package kyverno_test
+package listener_test
 
 import (
-	"testing"
-
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -53,42 +51,4 @@ func NewPolicy() *kyverno.Policy {
 	dec.Decode([]byte(policy), nil, &obj)
 
 	return kubernetes.NewMapper().MapPolicy(obj.Object)
-}
-
-func Test_PolicyStore(t *testing.T) {
-	store := kyverno.NewPolicyStore()
-	pol := NewPolicy()
-
-	t.Run("Add/Get", func(t *testing.T) {
-		_, ok := store.Get(pol.UID)
-		if ok == true {
-			t.Fatalf("Should not be found in empty Store")
-		}
-
-		store.Add(pol)
-		_, ok = store.Get(pol.UID)
-		if ok == false {
-			t.Errorf("Should be found in Store after adding report to the store")
-		}
-	})
-
-	t.Run("List", func(t *testing.T) {
-		items := store.List()
-		if len(items) != 1 {
-			t.Errorf("Should return List with the added Report")
-		}
-	})
-
-	t.Run("Delete/Get", func(t *testing.T) {
-		_, ok := store.Get(pol.UID)
-		if ok == false {
-			t.Errorf("Should be found in Store after adding report to the store")
-		}
-
-		store.Remove(pol.UID)
-		_, ok = store.Get(pol.UID)
-		if ok == true {
-			t.Fatalf("Should not be found after Remove report from Store")
-		}
-	})
 }

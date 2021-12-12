@@ -1,148 +1,145 @@
 package kubernetes
 
 import (
-	"errors"
+	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/tools/cache"
 )
 
-type policyReportClient struct {
-	policyAPI PolicyAdapter
-	store     *kyverno.PolicyStore
-	callbacks []kyverno.PolicyCallback
-	errorChan chan error
-	mapper    Mapper
-	started   bool
+var (
+	policySchema = schema.GroupVersionResource{
+		Group:    "kyverno.io",
+		Version:  "v1",
+		Resource: "clusterpolicies",
+	}
+
+	clusterPolicySchema = schema.GroupVersionResource{
+		Group:    "kyverno.io",
+		Version:  "v1",
+		Resource: "policies",
+	}
+)
+
+type policyClient struct {
+	client                dynamic.Interface
+	found                 map[string]bool
+	mapper                Mapper
+	mx                    *sync.Mutex
+	restartWatchOnFailure time.Duration
 }
 
-func (c *policyReportClient) RegisterCallback(cb kyverno.PolicyCallback) {
-	c.callbacks = append(c.callbacks, cb)
+// GetFoundResources as Map of Names
+func (c *policyClient) GetFoundResources() map[string]bool {
+	return c.found
 }
 
-func (c *policyReportClient) FetchPolicies() ([]kyverno.Policy, error) {
-	var items []kyverno.Policy
+// StartWatching returns a stream of incomming LifecyclePolicyEvents from the Kubernetes API
+func (c *policyClient) StartWatching(ctx context.Context) <-chan kyverno.LifecycleEvent {
+	eventChan := make(chan kyverno.LifecycleEvent)
 
-	policies, err := c.policyAPI.ListPolicies()
-	if err != nil {
-		log.Printf("K8s List Error: %s\n", err.Error())
-		return items, err
+	for _, version := range []schema.GroupVersionResource{policySchema, clusterPolicySchema} {
+		go func(v schema.GroupVersionResource) {
+			for {
+				factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.client, time.Hour, corev1.NamespaceAll, nil)
+				c.watchPolicyCRD(ctx, v, factory, eventChan)
+				time.Sleep(2 * time.Second)
+			}
+		}(version)
 	}
 
-	for _, item := range policies.Items {
-		items = append(items, c.mapper.MapPolicy(item.Object))
+	for {
+		if len(c.found) == 2 {
+			break
+		}
 	}
 
-	clusterPolicies, err := c.policyAPI.ListClusterPolicies()
-	if err != nil {
-		log.Printf("K8s List Error: %s\n", err.Error())
-		return items, err
-	}
-
-	for _, item := range clusterPolicies.Items {
-		items = append(items, c.mapper.MapPolicy(item.Object))
-	}
-
-	return items, nil
+	return eventChan
 }
 
-func (c *policyReportClient) StartWatching() error {
-	if c.started {
-		return errors.New("PolicyClient.StartWatching was already started")
-	}
+func (c *policyClient) watchPolicyCRD(
+	ctx context.Context,
+	resource schema.GroupVersionResource,
+	factory dynamicinformer.DynamicSharedInformerFactory,
+	eventChan chan<- kyverno.LifecycleEvent,
+) {
+	informer := factory.ForResource(resource).Informer()
+	ctx, cancel := context.WithCancel(ctx)
 
-	c.started = true
-	c.errorChan = make(chan error)
-	resultChan := make(chan watch.Event)
-	defer func() {
-		close(resultChan)
-	}()
+	informer.SetWatchErrorHandler(func(_ *cache.Reflector, err error) {
+		c.mx.Lock()
+		delete(c.found, resource.String())
+		c.mx.Unlock()
+		cancel()
 
-	go func() {
-		for {
-			result, err := c.policyAPI.WatchPolicies()
-			if err != nil {
-				c.started = false
-				c.errorChan <- errors.New("[Policy] " + err.Error())
+		log.Printf("[WARNING] Resource registration failed: %s\n", resource.String())
+	})
+
+	go c.handleCRDRegistration(ctx, informer, resource)
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if item, ok := obj.(*unstructured.Unstructured); ok {
+				eventChan <- kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: c.mapper.MapPolicy(item.Object), OldPolicy: &kyverno.Policy{}}
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			if item, ok := obj.(*unstructured.Unstructured); ok {
+				eventChan <- kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: c.mapper.MapPolicy(item.Object), OldPolicy: &kyverno.Policy{}}
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			if item, ok := newObj.(*unstructured.Unstructured); ok {
+				newPolicy := c.mapper.MapPolicy(item.Object)
+
+				var oldPolicy *kyverno.Policy
+				if oldItem, ok := oldObj.(*unstructured.Unstructured); ok {
+					oldPolicy = c.mapper.MapPolicy(oldItem.Object)
+				}
+
+				eventChan <- kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: newPolicy, OldPolicy: oldPolicy}
+			}
+		},
+	})
+
+	informer.Run(ctx.Done())
+}
+
+func (c *policyClient) handleCRDRegistration(ctx context.Context, informer cache.SharedIndexInformer, r schema.GroupVersionResource) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if informer.HasSynced() {
+				c.mx.Lock()
+				c.found[r.String()] = true
+				c.mx.Unlock()
+
+				log.Printf("[INFO] Resource registered: %s\n", r.String())
 				return
 			}
-
-			for result := range result.ResultChan() {
-				resultChan <- result
-			}
 		}
-	}()
-
-	go func() {
-		for {
-			result, err := c.policyAPI.WatchClusterPolicies()
-			if err != nil {
-				c.started = false
-				c.errorChan <- errors.New("[ClusterPolicy] " + err.Error())
-				return
-			}
-
-			for result := range result.ResultChan() {
-				resultChan <- result
-			}
-		}
-	}()
-
-	go func() {
-		for result := range resultChan {
-			if item, ok := result.Object.(*unstructured.Unstructured); ok {
-				report := c.mapper.MapPolicy(item.Object)
-				c.executeHandler(result.Type, report)
-			}
-		}
-	}()
-
-	return <-c.errorChan
+	}
 }
 
-func (c *policyReportClient) executeHandler(e watch.EventType, pr kyverno.Policy) {
-	opr, ok := c.store.Get(pr.GetIdentifier())
-	if !ok {
-		opr = kyverno.Policy{}
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(c.callbacks))
-
-	for _, cb := range c.callbacks {
-		go func(
-			callback kyverno.PolicyCallback,
-			event watch.EventType,
-			creport kyverno.Policy,
-			oreport kyverno.Policy,
-		) {
-			callback(event, creport, oreport)
-			wg.Done()
-		}(cb, e, pr, opr)
-	}
-
-	wg.Wait()
-
-	if e == watch.Deleted {
-		c.store.Remove(pr.GetIdentifier())
-		return
-	}
-
-	c.store.Add(pr)
-}
-
-// NewPolicyClient creates a new PolicyReportClient based on the kubernetes go-client
-func NewPolicyClient(
-	client PolicyAdapter,
-	store *kyverno.PolicyStore,
-	mapper Mapper,
-) kyverno.PolicyClient {
-	return &policyReportClient{
-		policyAPI: client,
-		store:     store,
-		mapper:    mapper,
+// NewPolicyClient creates a new PolicyClient based on the kubernetes go-client
+func NewPolicyClient(client dynamic.Interface, mapper Mapper, restartWatchOnFailure time.Duration) kyverno.PolicyClient {
+	return &policyClient{
+		client:                client,
+		mapper:                mapper,
+		found:                 make(map[string]bool),
+		mx:                    new(sync.Mutex),
+		restartWatchOnFailure: restartWatchOnFailure,
 	}
 }
