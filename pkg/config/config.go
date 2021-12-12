@@ -1,12 +1,24 @@
 package config
 
-// Server configuration
+// API configuration
 type API struct {
 	Port int `mapstructure:"port"`
 }
 
-// Config of the PolicyReporter
+// Metrics configuration
+type REST struct {
+	Enabled bool `mapstructure:"enabled"`
+}
+
+// Metrics configuration
+type Metrics struct {
+	Enabled bool `mapstructure:"enabled"`
+}
+
+// Config of the Policyer
 type Config struct {
-	API        API    `mapstructure:"api"`
-	Kubeconfig string `mapstructure:"kubeconfig"`
+	API        API     `mapstructure:"api"`
+	REST       REST    `mapstructure:"rest"`
+	Metrics    Metrics `mapstructure:"metrics"`
+	Kubeconfig string  `mapstructure:"kubeconfig"`
 }

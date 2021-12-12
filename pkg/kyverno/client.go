@@ -1,17 +1,13 @@
 package kyverno
 
-import (
-	"k8s.io/apimachinery/pkg/watch"
-)
+import "context"
 
-// PolicyCallback is called whenver a new PolicyReport comes in
-type PolicyCallback = func(watch.EventType, Policy, Policy)
+// PolicyListener is called whenver a new Policy comes in
+type PolicyListener = func(LifecycleEvent)
 
 type PolicyClient interface {
-	// RegisterPolicyReportCallback register Handlers called on each PolicyReport watch.Event
-	RegisterCallback(PolicyCallback)
-	// FetchPolicies from the unterlying API
-	FetchPolicies() ([]Policy, error)
-	// StartWatching calls the WatchAPI, waiting for incoming PolicyReport watch.Events and call the registered Handlers
-	StartWatching() error
+	// StartWatching watches for Policy Events and return a channel with incomming results
+	StartWatching(ctx context.Context) <-chan LifecycleEvent
+	// GetFoundResources as Map of Names
+	GetFoundResources() map[string]bool
 }

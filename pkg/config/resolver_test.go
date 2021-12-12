@@ -45,7 +45,7 @@ func Test_ResolvePolicyMapper(t *testing.T) {
 func Test_ResolveAPIServer(t *testing.T) {
 	resolver := config.NewResolver(testConfig, &rest.Config{})
 
-	server := resolver.APIServer()
+	server := resolver.APIServer(make(map[string]bool))
 	if server == nil {
 		t.Error("Error: Should return API Server")
 	}
@@ -61,4 +61,26 @@ func Test_ResolveClientWithInvalidK8sConfig(t *testing.T) {
 	if err == nil {
 		t.Error("Error: 'host must be a URL or a host:port pair' was expected")
 	}
+}
+
+func Test_RegisterStoreListener(t *testing.T) {
+	t.Run("Register StoreListener", func(t *testing.T) {
+		resolver := config.NewResolver(testConfig, &rest.Config{})
+		resolver.RegisterStoreListener()
+
+		if len(resolver.EventPublisher().GetListener()) != 1 {
+			t.Error("Expected one Listener to be registered")
+		}
+	})
+}
+
+func Test_RegisterMetricsListener(t *testing.T) {
+	t.Run("Register MetricsListener", func(t *testing.T) {
+		resolver := config.NewResolver(testConfig, &rest.Config{})
+		resolver.RegisterMetricsListener()
+
+		if len(resolver.EventPublisher().GetListener()) != 1 {
+			t.Error("Expected one Listener to be registered")
+		}
+	})
 }

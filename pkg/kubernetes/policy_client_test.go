@@ -1,56 +1,74 @@
 package kubernetes_test
 
 import (
-	"errors"
+	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/fake"
 )
 
-type fakeClient struct {
-	policies             []unstructured.Unstructured
-	clusterPolicies      []unstructured.Unstructured
-	policyWatcher        *watch.FakeWatcher
-	clusterPolicyWatcher *watch.FakeWatcher
-	policyError          error
-	clusterPolicyError   error
+var (
+	policySchema = schema.GroupVersionResource{
+		Group:    "kyverno.io",
+		Version:  "v1",
+		Resource: "clusterpolicies",
+	}
+
+	clusterPolicySchema = schema.GroupVersionResource{
+		Group:    "kyverno.io",
+		Version:  "v1",
+		Resource: "policies",
+	}
+)
+
+type store struct {
+	store []kyverno.LifecycleEvent
+	rwm   *sync.RWMutex
 }
 
-func (f *fakeClient) ListClusterPolicies() (*unstructured.UnstructuredList, error) {
-	return &unstructured.UnstructuredList{
-		Items: f.clusterPolicies,
-	}, f.clusterPolicyError
+func (s *store) Add(r kyverno.LifecycleEvent) {
+	s.rwm.Lock()
+	s.store = append(s.store, r)
+	s.rwm.Unlock()
 }
 
-func (f *fakeClient) ListPolicies() (*unstructured.UnstructuredList, error) {
-	return &unstructured.UnstructuredList{
-		Items: f.policies,
-	}, f.policyError
+func (s *store) Get(index int) kyverno.LifecycleEvent {
+	return s.store[index]
 }
 
-func (f *fakeClient) WatchClusterPolicies() (watch.Interface, error) {
-	return f.clusterPolicyWatcher, f.clusterPolicyError
+func (s *store) List() []kyverno.LifecycleEvent {
+	return s.store
 }
 
-func (f *fakeClient) WatchPolicies() (watch.Interface, error) {
-	return f.policyWatcher, f.policyError
-}
-
-func NewPolicyAdapter() *fakeClient {
-	return &fakeClient{
-		policies:             make([]unstructured.Unstructured, 0),
-		clusterPolicies:      make([]unstructured.Unstructured, 0),
-		policyWatcher:        watch.NewFake(),
-		clusterPolicyWatcher: watch.NewFake(),
+func newStore(size int) *store {
+	return &store{
+		store: make([]kyverno.LifecycleEvent, 0, size),
+		rwm:   &sync.RWMutex{},
 	}
 }
 
-func NewPolicy() unstructured.Unstructured {
+var gvrToListKind = map[schema.GroupVersionResource]string{
+	policySchema:        "PolicyList",
+	clusterPolicySchema: "ClusterPolicyList",
+}
+
+func NewFakeCilent() (dynamic.Interface, dynamic.ResourceInterface) {
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind)
+
+	return client, client.Resource(clusterPolicySchema)
+}
+
+func NewPolicyUnstructured(policy string) unstructured.Unstructured {
 	obj := unstructured.Unstructured{}
 	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	dec.Decode([]byte(policy), nil, &obj)
@@ -58,159 +76,52 @@ func NewPolicy() unstructured.Unstructured {
 	return obj
 }
 
-func Test_FetchPolicies(t *testing.T) {
-	fakeAdapter := NewPolicyAdapter()
-
-	client := kubernetes.NewPolicyClient(
-		fakeAdapter,
-		kyverno.NewPolicyStore(),
-		kubernetes.NewMapper(),
-	)
-
-	fakeAdapter.policies = append(fakeAdapter.policies, NewPolicy())
-
-	policies, err := client.FetchPolicies()
-	if err != nil {
-		t.Fatalf("Unexpected Error: %s", err)
-	}
-
-	if len(policies) != 1 {
-		t.Fatal("Expected one Policy")
-	}
-
-	expected := kubernetes.NewMapper().MapPolicy(NewPolicy().Object)
-	policy := policies[0]
-
-	if policy.Name != expected.Name {
-		t.Errorf("Expected Policy Name %s", expected.Name)
-	}
-}
-
-func Test_FetchPoliciesError(t *testing.T) {
-	fakeAdapter := NewPolicyAdapter()
-	fakeAdapter.policyError = errors.New("")
-
-	client := kubernetes.NewPolicyClient(
-		fakeAdapter,
-		kyverno.NewPolicyStore(),
-		kubernetes.NewMapper(),
-	)
-
-	_, err := client.FetchPolicies()
-	if err == nil {
-		t.Error("Configured Error should be returned")
-	}
-}
-
 func Test_PolicyWatcher(t *testing.T) {
-	fakeAdapter := NewPolicyAdapter()
-	store := kyverno.NewPolicyStore()
+	ctx := context.Background()
+	kclient, pclient := NewFakeCilent()
 
-	client := kubernetes.NewPolicyClient(
-		fakeAdapter,
-		store,
-		kubernetes.NewMapper(),
-	)
+	client := kubernetes.NewPolicyClient(kclient, kubernetes.NewMapper(), time.Millisecond)
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+	store := newStore(3)
+	eventChan := client.StartWatching(ctx)
 
-	results := make([]kyverno.Policy, 0, 1)
+	pol := NewPolicyUnstructured(policy)
+	minPol := NewPolicyUnstructured(minPolicy)
 
-	client.RegisterCallback(func(_ watch.EventType, p kyverno.Policy, o kyverno.Policy) {
-		results = append(results, p)
-		wg.Done()
+	t.Run("GetFoundResources", func(t *testing.T) {
+		found := client.GetFoundResources()
+		if len(found) != 2 {
+			t.Errorf("Expected 2 found resources, got %d", len(found))
+		}
 	})
 
-	go client.StartWatching()
+	t.Run("AddListener", func(t *testing.T) {
+		pclient.Create(ctx, &pol, v1.CreateOptions{})
 
-	pol := NewPolicy()
+		store.Add(<-eventChan)
 
-	fakeAdapter.policyWatcher.Add(&pol)
-
-	wg.Wait()
-
-	if len(results) != 1 {
-		t.Error("Should receive 1 Policy")
-	}
-
-	if len(store.List()) != 1 {
-		t.Error("Should include a single Policy")
-	}
-}
-
-func Test_PolicyModifyWatcher(t *testing.T) {
-	fakeAdapter := NewPolicyAdapter()
-	store := kyverno.NewPolicyStore()
-
-	client := kubernetes.NewPolicyClient(
-		fakeAdapter,
-		store,
-		kubernetes.NewMapper(),
-	)
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	results := make([]kyverno.Policy, 0, 2)
-
-	client.RegisterCallback(func(_ watch.EventType, p kyverno.Policy, o kyverno.Policy) {
-		results = append(results, p)
-		wg.Done()
+		if len(store.List()) != 1 {
+			t.Error("Should receive Add Event")
+		}
 	})
 
-	go client.StartWatching()
+	t.Run("UpdateListener", func(t *testing.T) {
+		pclient.Update(ctx, &minPol, v1.UpdateOptions{})
 
-	pol := NewPolicy()
+		store.Add(<-eventChan)
 
-	fakeAdapter.policyWatcher.Add(&pol)
-	fakeAdapter.policyWatcher.Modify(&pol)
-
-	wg.Wait()
-
-	if len(results) != 2 {
-		t.Error("Should receive 2 Policy")
-	}
-
-	if len(store.List()) != 1 {
-		t.Error("Should include a single Policy")
-	}
-}
-
-func Test_PolicyDeleteWatcher(t *testing.T) {
-	fakeAdapter := NewPolicyAdapter()
-	store := kyverno.NewPolicyStore()
-
-	client := kubernetes.NewPolicyClient(
-		fakeAdapter,
-		store,
-		kubernetes.NewMapper(),
-	)
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	results := make([]kyverno.Policy, 0, 2)
-
-	client.RegisterCallback(func(_ watch.EventType, p kyverno.Policy, o kyverno.Policy) {
-		results = append(results, p)
-		wg.Done()
+		if len(store.List()) != 2 {
+			t.Error("Should receive Update Event")
+		}
 	})
 
-	go client.StartWatching()
+	t.Run("DeleteListener", func(t *testing.T) {
+		pclient.Delete(ctx, "disallow-host-path", v1.DeleteOptions{})
 
-	pol := NewPolicy()
+		store.Add(<-eventChan)
 
-	fakeAdapter.policyWatcher.Add(&pol)
-	fakeAdapter.policyWatcher.Delete(&pol)
-
-	wg.Wait()
-
-	if len(results) != 2 {
-		t.Error("Should receive 2 Policy")
-	}
-
-	if len(store.List()) != 0 {
-		t.Error("Should be empty after deletion")
-	}
+		if len(store.List()) != 3 {
+			t.Error("Should receive Delete Event")
+		}
+	})
 }

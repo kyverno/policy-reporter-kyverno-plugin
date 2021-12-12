@@ -70,6 +70,45 @@ spec:
           - X(hostPath): "null"
 `
 
+var nsPolicy = `
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  creationTimestamp: "2021-03-31T13:42:01Z"
+  name: disallow-host-path
+  resourceVersion: "61655872"
+  uid: 953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7
+  namespace: "test"
+spec:
+  background: true
+  rules:
+  - match:
+      resources:
+        kinds:
+        - Pod
+    validate:
+      message:
+      pattern:
+        spec:
+          =(volumes):
+          - X(hostPath): "null"
+          rules:
+          - match:
+              resources:
+                kinds:
+                - Pod
+            validate:
+              message:
+              pattern:
+                spec:
+                  =(volumes):
+                  - X(hostPath): "null"
+  - match:
+      resources:
+        kinds:
+        - Pod
+`
+
 var genPolicy = `
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
@@ -180,14 +219,14 @@ func Test_MapPolicy(t *testing.T) {
 func Test_MapMinPolicy(t *testing.T) {
 	obj := &unstructured.Unstructured{}
 	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(minPolicy), nil, obj)
+	dec.Decode([]byte(nsPolicy), nil, obj)
 
 	mapper := kubernetes.NewMapper()
 
 	pol := mapper.MapPolicy(obj.Object)
 
-	if pol.Kind != "ClusterPolicy" {
-		t.Errorf("Expected Kind 'ClusterPolicy', go %s", pol.Kind)
+	if pol.Kind != "Policy" {
+		t.Errorf("Expected Kind 'Policy', go %s", pol.Kind)
 	}
 	if pol.Name != "disallow-host-path" {
 		t.Errorf("Expected Name 'disallow-host-path', go %s", pol.Name)
@@ -197,6 +236,9 @@ func Test_MapMinPolicy(t *testing.T) {
 	}
 	if pol.UID != "953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7" {
 		t.Errorf("Expected UID '953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7', go %s", pol.UID)
+	}
+	if pol.Namespace != "test" {
+		t.Errorf("Expected UID 'test', go %s", pol.Namespace)
 	}
 
 	rule := pol.Rules[0]
@@ -222,7 +264,7 @@ func Test_MapGeneratePolicy(t *testing.T) {
 
 	rule := pol.Rules[0]
 	if rule.Type != "generation" {
-		t.Errorf("Expected Rule Type 'generation', go %s", rule.Type)
+		t.Errorf("Expected Rule Type 'generation', got %s", rule.Type)
 	}
 }
 
@@ -237,6 +279,21 @@ func Test_MapMutatePolicy(t *testing.T) {
 
 	rule := pol.Rules[0]
 	if rule.Type != "mutation" {
-		t.Errorf("Expected Rule Type 'generation', go %s", rule.Type)
+		t.Errorf("Expected Rule Type 'generation', got %s", rule.Type)
+	}
+}
+
+func Test_MapEmptyPolicy(t *testing.T) {
+	obj := &unstructured.Unstructured{}
+	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	dec.Decode([]byte(nsPolicy), nil, obj)
+
+	mapper := kubernetes.NewMapper()
+
+	pol := mapper.MapPolicy(obj.Object)
+
+	rule := pol.Rules[1]
+	if rule.Type != "" {
+		t.Errorf("Expected Rule Type 'empty', got %s", rule.Type)
 	}
 }
