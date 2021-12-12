@@ -44,7 +44,7 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
-		log.Println("[INFO] No separete configuration file found")
+		log.Println("[INFO] No seperate configuration file found")
 	}
 
 	if flag := cmd.Flags().Lookup("kubeconfig"); flag != nil {

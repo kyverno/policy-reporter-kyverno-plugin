@@ -18,6 +18,10 @@ func Test_ResolvePolicyClient(t *testing.T) {
 	}
 
 	client2, err := resolver.PolicyClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
 	if client1 != client2 {
 		t.Error("A second call resolver.PolicyClient() should return the cached first client")
 	}

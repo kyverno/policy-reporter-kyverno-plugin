@@ -25,6 +25,9 @@ func Test_GzipCompression(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		reader, err := gzip.NewReader(rr.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer reader.Close()
 
 		buf := new(bytes.Buffer)
