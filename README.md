@@ -5,6 +5,10 @@
 
 This Plugin for [Policy Reporter](https://github.com/kyverno/policy-reporter) brings additional Kyverno specific information to the Policy Reporter UI. See what Policies in your Cluster exist, how they are configured and if there are any violations assiciated with them in a graphical UI.
 
+## Documentation
+
+See the <a href="https://kyverno.github.io/policy-reporter/kyverno-plugin/14-api-reference" target="_blank">Documentation</a> for details.
+
 ## Screenshots from Policy Reporter UI
 
 Examples how information from this Service are used.
