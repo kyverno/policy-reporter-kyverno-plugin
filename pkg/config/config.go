@@ -5,7 +5,7 @@ type API struct {
 	Port int `mapstructure:"port"`
 }
 
-// Metrics configuration
+// REST configuration
 type REST struct {
 	Enabled bool `mapstructure:"enabled"`
 }

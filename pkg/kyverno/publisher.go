@@ -2,6 +2,7 @@ package kyverno
 
 import "sync"
 
+// EventPublisher for LifecycleEvents
 type EventPublisher interface {
 	// RegisterListener register Handlers called on each PolicyReport watch.Event
 	RegisterListener(PolicyListener)
@@ -39,6 +40,7 @@ func (p *lifecycleEventPublisher) Publish(eventChan <-chan LifecycleEvent) {
 	}
 }
 
+// NewEventPublisher constructure for EventPublisher
 func NewEventPublisher() EventPublisher {
 	return &lifecycleEventPublisher{}
 }

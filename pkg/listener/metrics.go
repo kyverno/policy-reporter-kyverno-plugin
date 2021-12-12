@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// CreatePolicyMetricsCallback for Policy watch.Events
+// NewPolicyMetricsListener for Policy kyverno.LifecycleEvent
 func NewPolicyMetricsListener() kyverno.PolicyListener {
 	policyGauge := promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "kyverno_policy",

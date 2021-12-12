@@ -2,6 +2,7 @@ package kyverno
 
 import "sync"
 
+// PolicyStore persists the last state of a Policy in memory
 type PolicyStore struct {
 	store map[string]*Policy
 	rwm   *sync.RWMutex

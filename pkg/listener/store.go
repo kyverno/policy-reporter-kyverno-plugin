@@ -4,6 +4,7 @@ import (
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 )
 
+// NewStoreListener for Policy kyverno.LifecycleEvent
 func NewStoreListener(store *kyverno.PolicyStore) kyverno.PolicyListener {
 	return func(event kyverno.LifecycleEvent) {
 		if event.Type == kyverno.Deleted {

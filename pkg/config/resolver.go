@@ -82,7 +82,7 @@ func (r *Resolver) Mapper() kubernetes.Mapper {
 	return r.mapper
 }
 
-// RegisterSendResultListener resolver method
+// RegisterStoreListener resolver method
 func (r *Resolver) RegisterStoreListener() {
 	r.EventPublisher().RegisterListener(listener.NewStoreListener(r.PolicyStore()))
 }
