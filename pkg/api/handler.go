@@ -29,7 +29,7 @@ func PolicyHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 	}
 }
 
-// VerifyImageHandler for the ImageVerify Policy REST API
+// VerifyImageRulesHandler for the ImageVerify Policy REST API
 func VerifyImageRulesHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
