@@ -96,6 +96,38 @@ func (m *mapper) mapRule(rule map[string]interface{}) *kyverno.Rule {
 			r.Name = n
 		}
 	}
+	if verifyImages, ok := rule["verifyImages"]; ok {
+		r.Type = "validation"
+		r.VerifyImages = make([]*kyverno.VerifyImage, 0)
+
+		data := verifyImages.([]interface{})
+
+		r.VerifyImages = make([]*kyverno.VerifyImage, 0, len(data))
+
+		for _, d := range data {
+			if verify, ok := d.(map[string]interface{}); ok {
+				item := &kyverno.VerifyImage{}
+				if repo, ok := verify["repository"].(string); ok {
+					item.Repository = repo
+				}
+				if image, ok := verify["image"].(string); ok {
+					item.Image = image
+				}
+				if key, ok := verify["key"].(string); ok {
+					item.Key = strings.TrimSpace(key)
+				}
+				if attestations, ok := verify["attestations"].([]interface{}); ok && len(attestations) > 0 {
+					value, err := yaml.Marshal(map[string]interface{}{"attestations": attestations})
+					if err == nil {
+						item.Attestations = string(value)
+					}
+				}
+				r.VerifyImages = append(r.VerifyImages, item)
+			}
+		}
+
+		return r
+	}
 	if validate, ok := rule["validate"]; ok {
 		r.Type = "validation"
 

@@ -170,6 +170,45 @@ spec:
   validationFailureAction: audit
 `
 
+var veriyPolicy = `
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: check-image
+spec:
+  validationFailureAction: enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: check-image
+      match:
+        resources:
+          kinds:
+            - Pod
+      verifyImages:
+      - image: "ghcr.io/kyverno/test-verify-image:*"
+        repository: "registry.io/signatures"
+        key: |-
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
+          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
+          -----END PUBLIC KEY-----
+        attestations:
+          - predicateType: https://example.com/CodeReview/v1
+            conditions:
+              - all:
+                - key: "{{ repo.uri }}"
+                  operator: Equals
+                  value: "https://git-repo.com/org/app"            
+                - key: "{{ repo.branch }}"
+                  operator: Equals
+                  value: "main"
+                - key: "{{ reviewers }}"
+                  operator: In
+                  value: ["ana@example.com", "bob@example.com"]
+`
+
 func Test_MapPolicy(t *testing.T) {
 	obj := &unstructured.Unstructured{}
 	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -295,5 +334,43 @@ func Test_MapEmptyPolicy(t *testing.T) {
 	rule := pol.Rules[1]
 	if rule.Type != "" {
 		t.Errorf("Expected Rule Type 'empty', got %s", rule.Type)
+	}
+}
+
+func Test_MapVerifyImagePolicy(t *testing.T) {
+	obj := &unstructured.Unstructured{}
+	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	dec.Decode([]byte(veriyPolicy), nil, obj)
+
+	mapper := kubernetes.NewMapper()
+
+	pol := mapper.MapPolicy(obj.Object)
+
+	rule := pol.Rules[0]
+
+	if len(rule.VerifyImages) == 0 {
+		t.Fatalf("Expected VerifyImages information to be parsed")
+	}
+
+	verify := rule.VerifyImages[0]
+	if verify.Repository != "registry.io/signatures" {
+		t.Errorf("Expected Repo to be 'registry.io/signatures', got %s", verify.Repository)
+	}
+	if verify.Image != "ghcr.io/kyverno/test-verify-image:*" {
+		t.Errorf("Expected Image to be 'ghcr.io/kyverno/test-verify-image:*', got %s", verify.Image)
+	}
+	if verify.Attestations == "" {
+		t.Errorf("Expected Attestations not be empty")
+	}
+
+	key := strings.TrimSpace(`
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
+5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
+-----END PUBLIC KEY-----
+  `)
+
+	if verify.Key != key {
+		t.Errorf("Expected Key to be \n'%s', got \n'%s'", key, verify.Key)
 	}
 }

@@ -21,11 +21,20 @@ type LifecycleEvent struct {
 	OldPolicy *Policy
 }
 
+// VerifyImage from the Policy spec clusterpolicies.kyverno.io/v1.Policy
+type VerifyImage struct {
+	Attestations string `json:"attestations,omitempty"`
+	Repository   string `json:"repository"`
+	Image        string `json:"image"`
+	Key          string `json:"key"`
+}
+
 // Rule from the Policy spec clusterpolicies.kyverno.io/v1.Policy
 type Rule struct {
-	ValidateMessage string `json:"message,omitempty"`
-	Name            string `json:"name"`
-	Type            string `json:"type"`
+	ValidateMessage string         `json:"message,omitempty"`
+	Name            string         `json:"name"`
+	Type            string         `json:"type"`
+	VerifyImages    []*VerifyImage `json:"verifyImages,omitempty"`
 }
 
 // Policy spec clusterpolicies.kyverno.io/v1.Policy
