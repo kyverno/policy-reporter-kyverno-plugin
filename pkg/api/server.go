@@ -39,6 +39,7 @@ func (s *httpServer) RegisterMetrics() {
 
 func (s *httpServer) RegisterREST() {
 	s.mux.HandleFunc("/policies", Gzip(PolicyHandler(s.store)))
+	s.mux.HandleFunc("/verify-image-rules", Gzip(VerifyImageRulesHandler(s.store)))
 }
 
 func (s *httpServer) Start() error {
