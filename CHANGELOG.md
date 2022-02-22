@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+
+* Support for linux/s390x Archs [[#13](https://github.com/kyverno/policy-reporter-kyverno-plugin/pull/13) by [skuethe](https://github.com/skuethe)]
+
 ## 1.1.0
 
 * Add VerifyImages information to `/policy` API
