@@ -1,8 +1,16 @@
 # Changelog
 
+## 1.2.1 
+
+* Bump Go Verstion to Go 1.17.8
+
 ## 1.2.0
 
 * Support for linux/s390x Archs [[#13](https://github.com/kyverno/policy-reporter-kyverno-plugin/pull/13) by [skuethe](https://github.com/skuethe)]
+
+## 1.1.1
+
+* Bump Go Verstion to Go 1.17.6 [[#12](https://github.com/kyverno/policy-reporter-kyverno-plugin/pull/12) by [realshuting](https://github.com/realshuting)]
 
 ## 1.1.0
 
