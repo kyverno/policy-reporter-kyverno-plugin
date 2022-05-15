@@ -14,6 +14,11 @@ const (
 	Deleted
 )
 
+const (
+	PolicyKind        = "Policy"
+	ClusterPolicyKind = "ClusterPolicy"
+)
+
 // LifecycleEvent of Policys
 type LifecycleEvent struct {
 	Type      Event
@@ -52,4 +57,31 @@ type Policy struct {
 	CreationTimestamp       time.Time `json:"creationTimestamp,omitempty"`
 	UID                     string    `json:"uid,omitempty"`
 	Content                 string    `json:"content"`
+}
+
+type ViolationResource struct {
+	Kind      string
+	Name      string
+	Namespace string
+}
+
+type ViolationEvent struct {
+	Name string
+	UID  string
+}
+
+type ViolationPolicy struct {
+	Name     string
+	Rule     string
+	Message  string
+	Category string
+	Severity string
+}
+
+type PolicyViolation struct {
+	Resource  ViolationResource
+	Policy    ViolationPolicy
+	Event     ViolationEvent
+	Timestamp time.Time
+	Updated   bool
 }

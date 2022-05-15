@@ -12,3 +12,9 @@ type PolicyClient interface {
 	// GetFoundResources as Map of Names
 	GetFoundResources() map[string]bool
 }
+
+// EventClient to watch for PolicyViolations in the cluster
+type EventClient interface {
+	// StartWatching watches for PolicyViolation Events and return a channel with incomming events
+	StartWatching(ctx context.Context) <-chan PolicyViolation
+}

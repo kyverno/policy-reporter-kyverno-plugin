@@ -27,6 +27,42 @@ func Test_ResolvePolicyClient(t *testing.T) {
 	}
 }
 
+func Test_ResolvePolicyReportClient(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	client1, err := resolver.PolicyReportClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	client2, err := resolver.PolicyReportClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	if client1 != client2 {
+		t.Error("A second call resolver.PolicyReportClient() should return the cached first client")
+	}
+}
+
+func Test_ResolveEventClient(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	client1, err := resolver.EventClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	client2, err := resolver.EventClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	if client1 != client2 {
+		t.Error("A second call resolver.EventClient() should return the cached first client")
+	}
+}
+
 func Test_ResolvePolicyStore(t *testing.T) {
 	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
 
@@ -62,6 +98,29 @@ func Test_ResolveClientWithInvalidK8sConfig(t *testing.T) {
 	resolver := config.NewResolver(&config.Config{}, k8sConfig)
 
 	_, err := resolver.PolicyClient()
+	if err == nil {
+		t.Error("Error: 'host must be a URL or a host:port pair' was expected")
+	}
+}
+func Test_ResolveEventClientWithInvalidK8sConfig(t *testing.T) {
+	k8sConfig := &rest.Config{}
+	k8sConfig.Host = "invalid/url"
+
+	resolver := config.NewResolver(&config.Config{}, k8sConfig)
+
+	_, err := resolver.EventClient()
+	if err == nil {
+		t.Error("Error: 'host must be a URL or a host:port pair' was expected")
+	}
+}
+
+func Test_ResolvePolicyReportClientWithInvalidK8sConfig(t *testing.T) {
+	k8sConfig := &rest.Config{}
+	k8sConfig.Host = "invalid/url"
+
+	resolver := config.NewResolver(&config.Config{}, k8sConfig)
+
+	_, err := resolver.PolicyReportClient()
 	if err == nil {
 		t.Error("Error: 'host must be a URL or a host:port pair' was expected")
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"log"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 	"github.com/spf13/cobra"
@@ -36,15 +37,18 @@ func newRunCMD() *cobra.Command {
 
 			resolver := config.NewResolver(c, k8sConfig)
 
-			client, err := resolver.PolicyClient()
+			policyClient, err := resolver.PolicyClient()
 			if err != nil {
 				return err
 			}
 
-			server := resolver.APIServer(client.GetFoundResources())
+			server := resolver.APIServer(policyClient.GetFoundResources())
+
+			if c.REST.Enabled || c.BlockReports.Enabled {
+				resolver.RegisterStoreListener()
+			}
 
 			if c.REST.Enabled {
-				resolver.RegisterStoreListener()
 				server.RegisterREST()
 			}
 
@@ -57,8 +61,34 @@ func newRunCMD() *cobra.Command {
 
 			g.Go(server.Start)
 
+			if c.BlockReports.Enabled {
+				log.Printf("[INFO] Block Reports enabled, max results per Report: %d\n", c.BlockReports.Results.MaxPerReport)
+				eventClient, err := resolver.EventClient()
+				if err != nil {
+					return err
+				}
+
+				policyReportClient, err := resolver.PolicyReportClient()
+				if err != nil {
+					return err
+				}
+
+				g.Go(func() error {
+					eventChan := eventClient.StartWatching(ctx)
+
+					for violation := range eventChan {
+						err := policyReportClient.ProcessViolation(ctx, violation)
+						if err != nil {
+							log.Printf("[ERROR] %s", err)
+						}
+					}
+
+					return nil
+				})
+			}
+
 			g.Go(func() error {
-				eventChan := client.StartWatching(ctx)
+				eventChan := policyClient.StartWatching(ctx)
 
 				resolver.EventPublisher().Publish(eventChan)
 

@@ -15,10 +15,24 @@ type Metrics struct {
 	Enabled bool `mapstructure:"enabled"`
 }
 
+// Results configuration
+type Results struct {
+	MaxPerReport   int  `mapstructure:"maxPerReport"`
+	KeepOnlyLatest bool `mapstructure:"keepOnlyLatest"`
+}
+
+// BlockReports configuration
+type BlockReports struct {
+	Enabled bool    `mapstructure:"enabled"`
+	Results Results `mapstructure:"results"`
+	Source  string  `mapstructure:"source"`
+}
+
 // Config of the Policyer
 type Config struct {
-	API        API     `mapstructure:"api"`
-	REST       REST    `mapstructure:"rest"`
-	Metrics    Metrics `mapstructure:"metrics"`
-	Kubeconfig string  `mapstructure:"kubeconfig"`
+	API          API          `mapstructure:"api"`
+	REST         REST         `mapstructure:"rest"`
+	Metrics      Metrics      `mapstructure:"metrics"`
+	Kubeconfig   string       `mapstructure:"kubeconfig"`
+	BlockReports BlockReports `mapstructure:"blockReports"`
 }
