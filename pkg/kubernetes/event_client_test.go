@@ -98,7 +98,7 @@ func Test_EventWatcher(t *testing.T) {
 	eventChan := client.StartWatching(ctx)
 
 	t.Run("AddListener", func(t *testing.T) {
-		pclient.Create(ctx, baseEvent, v1.CreateOptions{})
+		_, _ = pclient.Create(ctx, baseEvent, v1.CreateOptions{})
 
 		violation := <-eventChan
 
@@ -117,7 +117,7 @@ func Test_EventWatcher(t *testing.T) {
 		event := baseEvent.DeepCopy()
 		event.LastTimestamp = v1.Now()
 
-		pclient.Update(ctx, event, v1.UpdateOptions{})
+		_, _ = pclient.Update(ctx, event, v1.UpdateOptions{})
 
 		violation := <-eventChan
 
@@ -137,7 +137,7 @@ func Test_EventWatcher(t *testing.T) {
 		event.Message = "Namespace test: [require-resource-request] fail (blocked)"
 		event.UID = "58ee457c-465b-482a-a965-b206fe8567bd"
 
-		pclient.Update(ctx, event, v1.UpdateOptions{})
+		_, _ = pclient.Update(ctx, event, v1.UpdateOptions{})
 
 		violation := <-eventChan
 
@@ -166,7 +166,7 @@ func Test_EventWatcher(t *testing.T) {
 		event.Message = "Namespace test: [require-resource-request] fail"
 		event.LastTimestamp = v1.Now()
 
-		pclient.Create(ctx, event, v1.CreateOptions{})
+		_, _ = pclient.Create(ctx, event, v1.CreateOptions{})
 	})
 }
 
@@ -184,9 +184,9 @@ func Test_NotBlockedEvent(t *testing.T) {
 	event.Message = "Namespace test: [require-resource-request] fail"
 	event.LastTimestamp = v1.Now()
 
-	pclient.Create(ctx, event, v1.CreateOptions{})
+	_, _ = pclient.Create(ctx, event, v1.CreateOptions{})
 	time.Sleep(1 * time.Millisecond)
-	pclient.Update(ctx, event, v1.UpdateOptions{})
+	_, _ = pclient.Update(ctx, event, v1.UpdateOptions{})
 
 	go func() {
 		<-eventChan
@@ -210,9 +210,9 @@ func Test_UnknownPolicy(t *testing.T) {
 	event.InvolvedObject.Name = "unknown"
 	event.InvolvedObject.UID = "4baaf7cc-4f7c-4746-b8e3-1dd7cc002c75"
 
-	pclient.Create(ctx, event, v1.CreateOptions{})
+	_, _ = pclient.Create(ctx, event, v1.CreateOptions{})
 	time.Sleep(1 * time.Millisecond)
-	pclient.Update(ctx, event, v1.UpdateOptions{})
+	_, _ = pclient.Update(ctx, event, v1.UpdateOptions{})
 
 	go func() {
 		<-eventChan

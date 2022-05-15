@@ -46,7 +46,7 @@ func (e *eventClient) watchEvents(ctx context.Context, violationChan chan<- kyve
 
 	informer := factory.Core().V1().Events().Informer()
 
-	informer.SetWatchErrorHandler(func(_ *cache.Reflector, err error) {
+	informer.SetWatchErrorHandler(func(_ *cache.Reflector, _ error) {
 		log.Println("[WARNING] Event watch failure - restarting")
 	})
 
