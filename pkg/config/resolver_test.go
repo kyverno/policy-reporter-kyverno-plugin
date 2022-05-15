@@ -27,6 +27,24 @@ func Test_ResolvePolicyClient(t *testing.T) {
 	}
 }
 
+func Test_ResolvePolicyReportClient(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	client1, err := resolver.PolicyReportClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	client2, err := resolver.PolicyReportClient()
+	if err != nil {
+		t.Errorf("Unexpected Error: %s", err)
+	}
+
+	if client1 != client2 {
+		t.Error("A second call resolver.PolicyReportClient() should return the cached first client")
+	}
+}
+
 func Test_ResolvePolicyStore(t *testing.T) {
 	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
 

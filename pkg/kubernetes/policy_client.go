@@ -19,13 +19,13 @@ var (
 	policySchema = schema.GroupVersionResource{
 		Group:    "kyverno.io",
 		Version:  "v1",
-		Resource: "clusterpolicies",
+		Resource: "policies",
 	}
 
 	clusterPolicySchema = schema.GroupVersionResource{
 		Group:    "kyverno.io",
 		Version:  "v1",
-		Resource: "policies",
+		Resource: "clusterpolicies",
 	}
 )
 

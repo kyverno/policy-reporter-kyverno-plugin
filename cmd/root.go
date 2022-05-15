@@ -26,6 +26,8 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	v := viper.New()
 
 	v.SetDefault("api.port", 8080)
+	v.SetDefault("blockReports.source", "Kyverno Event")
+	v.SetDefault("blockReports.results.maxPerReport", 100)
 
 	cfgFile := ""
 
