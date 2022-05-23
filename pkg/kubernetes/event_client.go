@@ -20,6 +20,7 @@ type eventClient struct {
 	policyStore           *kyverno.PolicyStore
 	restartWatchOnFailure time.Duration
 	startUp               time.Time
+	eventNamespace        string
 }
 
 func (e *eventClient) StartWatching(ctx context.Context) <-chan kyverno.PolicyViolation {
@@ -36,7 +37,7 @@ func (e *eventClient) StartWatching(ctx context.Context) <-chan kyverno.PolicyVi
 }
 
 func (e *eventClient) watchEvents(ctx context.Context, violationChan chan<- kyverno.PolicyViolation) {
-	factory := informers.NewFilteredSharedInformerFactory(e.client, 0, corev1.NamespaceAll, func(lo *v1.ListOptions) {
+	factory := informers.NewFilteredSharedInformerFactory(e.client, 0, e.eventNamespace, func(lo *v1.ListOptions) {
 		lo.FieldSelector = fields.Set{
 			"source": "kyverno-admission",
 			"reason": "PolicyViolation",
@@ -134,11 +135,12 @@ type EventClient interface {
 	StartWatching(ctx context.Context) <-chan kyverno.PolicyViolation
 }
 
-func NewEventClient(client k8s.Interface, policyStore *kyverno.PolicyStore, restartWatchOnFailure time.Duration) EventClient {
+func NewEventClient(client k8s.Interface, policyStore *kyverno.PolicyStore, restartWatchOnFailure time.Duration, eventNamespace string) EventClient {
 	return &eventClient{
 		client:                client,
 		policyStore:           policyStore,
 		restartWatchOnFailure: restartWatchOnFailure,
 		startUp:               time.Now(),
+		eventNamespace:        eventNamespace,
 	}
 }
