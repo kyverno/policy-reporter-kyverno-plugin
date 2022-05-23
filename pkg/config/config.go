@@ -23,9 +23,10 @@ type Results struct {
 
 // BlockReports configuration
 type BlockReports struct {
-	Enabled bool    `mapstructure:"enabled"`
-	Results Results `mapstructure:"results"`
-	Source  string  `mapstructure:"source"`
+	Enabled        bool    `mapstructure:"enabled"`
+	Results        Results `mapstructure:"results"`
+	Source         string  `mapstructure:"source"`
+	EventNamespace string  `mapstructure:"eventNamespace"`
 }
 
 // Config of the Policyer

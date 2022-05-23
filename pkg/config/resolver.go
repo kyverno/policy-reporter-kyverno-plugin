@@ -87,7 +87,7 @@ func (r *Resolver) EventClient() (kyverno.EventClient, error) {
 		return nil, err
 	}
 
-	eventClient := k8s.NewEventClient(clientset, r.PolicyStore(), 5*time.Second)
+	eventClient := k8s.NewEventClient(clientset, r.PolicyStore(), 5*time.Second, r.config.BlockReports.EventNamespace)
 
 	r.eventClient = eventClient
 

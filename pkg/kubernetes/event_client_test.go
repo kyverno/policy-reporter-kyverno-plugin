@@ -92,7 +92,7 @@ func Test_EventWatcher(t *testing.T) {
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond)
+	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond, "default")
 
 	store := newEventStore(3)
 	eventChan := client.StartWatching(ctx)
@@ -176,7 +176,7 @@ func Test_NotBlockedEvent(t *testing.T) {
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond)
+	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond, "default")
 
 	eventChan := client.StartWatching(ctx)
 
@@ -202,7 +202,7 @@ func Test_UnknownPolicy(t *testing.T) {
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond)
+	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond, "default")
 
 	eventChan := client.StartWatching(ctx)
 
