@@ -1,8 +1,6 @@
 package config
 
 import (
-	"time"
-
 	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
 	k8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
@@ -24,6 +22,7 @@ type Resolver struct {
 	eventClient  kyverno.EventClient
 	polrClient   policyreport.Client
 	publisher    kyverno.EventPublisher
+	vPulisher    kyverno.ViolationPublisher
 }
 
 // APIServer resolver method
@@ -52,10 +51,20 @@ func (r *Resolver) EventPublisher() kyverno.EventPublisher {
 		return r.publisher
 	}
 
-	s := kyverno.NewEventPublisher()
-	r.publisher = s
+	r.publisher = kyverno.NewEventPublisher()
 
 	return r.publisher
+}
+
+// EventPublisher resolver method
+func (r *Resolver) ViolationPublisher() kyverno.ViolationPublisher {
+	if r.vPulisher != nil {
+		return r.vPulisher
+	}
+
+	r.vPulisher = kyverno.NewViolationPublisher()
+
+	return r.vPulisher
 }
 
 // PolicyClient resolver method
@@ -87,7 +96,7 @@ func (r *Resolver) EventClient() (kyverno.EventClient, error) {
 		return nil, err
 	}
 
-	eventClient := k8s.NewEventClient(clientset, r.PolicyStore(), 5*time.Second, r.config.BlockReports.EventNamespace)
+	eventClient := k8s.NewEventClient(clientset, r.ViolationPublisher(), r.PolicyStore(), r.config.BlockReports.EventNamespace)
 
 	r.eventClient = eventClient
 

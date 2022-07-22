@@ -88,14 +88,27 @@ func newEventStore(size int) *eventStore {
 
 func Test_EventWatcher(t *testing.T) {
 	ctx := context.Background()
+	stop := make(chan struct{})
+	defer close(stop)
+
 	kclient, pclient := NewEventFakeCilent()
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond, "default")
+	eventChan := make(chan kyverno.PolicyViolation)
+
+	publisher := kyverno.NewViolationPublisher()
+	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+		eventChan <- pv
+	})
+
+	client := kubernetes.NewEventClient(kclient, publisher, policyStore, "default")
+	err := client.Run(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	store := newEventStore(3)
-	eventChan := client.StartWatching(ctx)
 
 	t.Run("AddListener", func(t *testing.T) {
 		_, _ = pclient.Create(ctx, baseEvent, v1.CreateOptions{})
@@ -172,13 +185,25 @@ func Test_EventWatcher(t *testing.T) {
 
 func Test_NotBlockedEvent(t *testing.T) {
 	ctx := context.Background()
+	stop := make(chan struct{})
+	defer close(stop)
+
 	kclient, pclient := NewEventFakeCilent()
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond, "default")
+	eventChan := make(chan kyverno.PolicyViolation)
 
-	eventChan := client.StartWatching(ctx)
+	publisher := kyverno.NewViolationPublisher()
+	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+		eventChan <- pv
+	})
+
+	client := kubernetes.NewEventClient(kclient, publisher, policyStore, "default")
+	err := client.Run(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	event := baseEvent.DeepCopy()
 	event.Message = "Namespace test: [require-resource-request] fail"
@@ -198,13 +223,25 @@ func Test_NotBlockedEvent(t *testing.T) {
 
 func Test_UnknownPolicy(t *testing.T) {
 	ctx := context.Background()
+	stop := make(chan struct{})
+	defer close(stop)
+
 	kclient, pclient := NewEventFakeCilent()
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	client := kubernetes.NewEventClient(kclient, policyStore, time.Millisecond, "default")
+	eventChan := make(chan kyverno.PolicyViolation)
 
-	eventChan := client.StartWatching(ctx)
+	publisher := kyverno.NewViolationPublisher()
+	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+		eventChan <- pv
+	})
+
+	client := kubernetes.NewEventClient(kclient, publisher, policyStore, "default")
+	err := client.Run(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	event := baseEvent.DeepCopy()
 	event.InvolvedObject.Name = "unknown"

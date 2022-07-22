@@ -6,8 +6,8 @@ import (
 	"log"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -56,10 +56,6 @@ func newRunCMD() *cobra.Command {
 				server.RegisterMetrics()
 			}
 
-			g := &errgroup.Group{}
-
-			g.Go(server.Start)
-
 			if c.BlockReports.Enabled {
 				log.Printf("[INFO] Block Reports enabled, max results per Report: %d\n", c.BlockReports.Results.MaxPerReport)
 				eventClient, err := resolver.EventClient()
@@ -72,29 +68,33 @@ func newRunCMD() *cobra.Command {
 					return err
 				}
 
-				g.Go(func() error {
-					eventChan := eventClient.StartWatching(ctx)
-
-					for violation := range eventChan {
-						err := policyReportClient.ProcessViolation(ctx, violation)
-						if err != nil {
-							log.Printf("[ERROR] %s", err)
-						}
-					}
-
-					return nil
+				resolver.ViolationPublisher().RegisterListener(func(pv kyverno.PolicyViolation) {
+					policyReportClient.ProcessViolation(ctx, pv)
 				})
-			}
-
-			g.Go(func() error {
 
 				stop := make(chan struct{})
 				defer close(stop)
 
-				return policyClient.Run(stop)
-			})
+				err = eventClient.Run(stop)
+				if err != nil {
+					return err
+				}
+			}
 
-			return g.Wait()
+			stop := make(chan struct{})
+			defer close(stop)
+
+			err = policyClient.Run(stop)
+			if err != nil {
+				return err
+			}
+
+			err = server.Start()
+			if err != nil {
+				return err
+			}
+
+			return nil
 		},
 	}
 
