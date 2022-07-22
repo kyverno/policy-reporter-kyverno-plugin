@@ -85,7 +85,7 @@ func Test_ResolvePolicyMapper(t *testing.T) {
 func Test_ResolveAPIServer(t *testing.T) {
 	resolver := config.NewResolver(testConfig, &rest.Config{})
 
-	server := resolver.APIServer(make(map[string]bool))
+	server := resolver.APIServer(func() bool { return true })
 	if server == nil {
 		t.Error("Error: Should return API Server")
 	}

@@ -8,8 +8,6 @@ import (
 )
 
 func Test_PublishLifecycleEvents(t *testing.T) {
-	eventChan := make(chan kyverno.LifecycleEvent)
-
 	var event kyverno.LifecycleEvent
 
 	wg := sync.WaitGroup{}
@@ -21,13 +19,7 @@ func Test_PublishLifecycleEvents(t *testing.T) {
 		wg.Done()
 	})
 
-	go func() {
-		eventChan <- kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: &kyverno.Policy{}, OldPolicy: &kyverno.Policy{}}
-
-		close(eventChan)
-	}()
-
-	publisher.Publish(eventChan)
+	publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: kyverno.Policy{}, OldPolicy: kyverno.Policy{}})
 
 	wg.Wait()
 

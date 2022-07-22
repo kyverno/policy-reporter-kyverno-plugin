@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2 
+
+* Refactor DynamicInformer logic
+* Update Depdencies and Workflow to Go 1.18
+
 ## 1.2.1 
 
 * Bump Go Verstion to Go 1.17.8

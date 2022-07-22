@@ -13,7 +13,7 @@ func Test_StoreListener(t *testing.T) {
 
 	t.Run("Save Policy", func(t *testing.T) {
 		slistener := listener.NewStoreListener(store)
-		slistener(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol, OldPolicy: &kyverno.Policy{}})
+		slistener(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol, OldPolicy: kyverno.Policy{}})
 
 		if _, ok := store.Get(pol.UID); !ok {
 			t.Error("Expected Report to be stored")
@@ -21,7 +21,7 @@ func Test_StoreListener(t *testing.T) {
 	})
 	t.Run("Remove Deleted Policy", func(t *testing.T) {
 		slistener := listener.NewStoreListener(store)
-		slistener(kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: pol, OldPolicy: &kyverno.Policy{}})
+		slistener(kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: pol, OldPolicy: kyverno.Policy{}})
 
 		if _, ok := store.Get(pol.UID); ok {
 			t.Error("Expected Report to be removed")

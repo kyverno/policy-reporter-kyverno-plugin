@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"log"
 
@@ -42,7 +41,7 @@ func newRunCMD() *cobra.Command {
 				return err
 			}
 
-			server := resolver.APIServer(policyClient.GetFoundResources())
+			server := resolver.APIServer(policyClient.HasSynced)
 
 			if c.REST.Enabled || c.BlockReports.Enabled {
 				resolver.RegisterStoreListener()
@@ -88,11 +87,11 @@ func newRunCMD() *cobra.Command {
 			}
 
 			g.Go(func() error {
-				eventChan := policyClient.StartWatching(ctx)
 
-				resolver.EventPublisher().Publish(eventChan)
+				stop := make(chan struct{})
+				defer close(stop)
 
-				return errors.New("event publisher stoped")
+				return policyClient.Run(stop)
 			})
 
 			return g.Wait()

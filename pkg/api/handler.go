@@ -78,9 +78,9 @@ func VerifyImageRulesHandler(s *kyverno.PolicyStore) http.HandlerFunc {
 }
 
 // HealthzHandler for the Liveness REST API
-func HealthzHandler(found map[string]bool) http.HandlerFunc {
+func HealthzHandler(synced func() bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if len(found) == 0 {
+		if !synced() {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusServiceUnavailable)
 

@@ -22,8 +22,8 @@ const (
 // LifecycleEvent of Policys
 type LifecycleEvent struct {
 	Type      Event
-	NewPolicy *Policy
-	OldPolicy *Policy
+	NewPolicy Policy
+	OldPolicy Policy
 }
 
 // VerifyImage from the Policy spec clusterpolicies.kyverno.io/v1.Policy

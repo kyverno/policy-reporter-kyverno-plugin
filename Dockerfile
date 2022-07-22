@@ -1,6 +1,6 @@
-FROM golang:1.17.8 as builder
+FROM golang:1.18 as builder
 
-ARG LD_FLAGS
+ARG LD_FLAGS="-s -w"
 ARG TARGETPLATFORM
 
 WORKDIR /app

@@ -19,7 +19,7 @@ func Test_PolicyMetricGeneration(t *testing.T) {
 	handler := listener.NewPolicyMetricsListener()
 
 	t.Run("Added Metric", func(t *testing.T) {
-		handler(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol1, OldPolicy: &kyverno.Policy{}})
+		handler(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol1, OldPolicy: kyverno.Policy{}})
 
 		metricFam, err := prometheus.DefaultGatherer.Gather()
 		if err != nil {
@@ -35,7 +35,7 @@ func Test_PolicyMetricGeneration(t *testing.T) {
 	})
 
 	t.Run("Modified Metric", func(t *testing.T) {
-		handler(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol1, OldPolicy: &kyverno.Policy{}})
+		handler(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol1, OldPolicy: kyverno.Policy{}})
 		handler(kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: pol2, OldPolicy: pol1})
 
 		metricFam, err := prometheus.DefaultGatherer.Gather()
@@ -52,9 +52,9 @@ func Test_PolicyMetricGeneration(t *testing.T) {
 	})
 
 	t.Run("Deleted Metric", func(t *testing.T) {
-		handler(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol1, OldPolicy: &kyverno.Policy{}})
+		handler(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: pol1, OldPolicy: kyverno.Policy{}})
 		handler(kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: pol2, OldPolicy: pol1})
-		handler(kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: pol2, OldPolicy: &kyverno.Policy{}})
+		handler(kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: pol2, OldPolicy: kyverno.Policy{}})
 
 		metricFam, err := prometheus.DefaultGatherer.Gather()
 		if err != nil {
@@ -68,7 +68,7 @@ func Test_PolicyMetricGeneration(t *testing.T) {
 	})
 }
 
-func testResultMetricLabels(metric *io_prometheus_client.Metric, policy *kyverno.Policy) error {
+func testResultMetricLabels(metric *io_prometheus_client.Metric, policy kyverno.Policy) error {
 	rule := policy.Rules[0]
 
 	if name := *metric.Label[0].Name; name != "background" {
