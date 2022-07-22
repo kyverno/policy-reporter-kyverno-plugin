@@ -22,14 +22,14 @@ type Server interface {
 }
 
 type httpServer struct {
-	mux            *http.ServeMux
-	store          *kyverno.PolicyStore
-	http           http.Server
-	foundResources map[string]bool
+	mux    *http.ServeMux
+	store  *kyverno.PolicyStore
+	http   http.Server
+	synced func() bool
 }
 
 func (s *httpServer) registerHandler() {
-	s.mux.HandleFunc("/healthz", HealthzHandler(s.foundResources))
+	s.mux.HandleFunc("/healthz", HealthzHandler(s.synced))
 	s.mux.HandleFunc("/ready", ReadyHandler())
 }
 
@@ -51,13 +51,13 @@ func (s *httpServer) Shutdown(ctx context.Context) error {
 }
 
 // NewServer constructor for a new API Server
-func NewServer(pStore *kyverno.PolicyStore, port int, foundResources map[string]bool) Server {
+func NewServer(pStore *kyverno.PolicyStore, port int, synced func() bool) Server {
 	mux := http.NewServeMux()
 
 	s := &httpServer{
-		store:          pStore,
-		mux:            mux,
-		foundResources: foundResources,
+		store:  pStore,
+		mux:    mux,
+		synced: synced,
 		http: http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: mux,

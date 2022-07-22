@@ -39,8 +39,8 @@ func NewPolicyMetricsListener() kyverno.PolicyListener {
 	}
 }
 
-func generateResultLabels(policy *kyverno.Policy, rule *kyverno.Rule) prometheus.Labels {
-	labels := prometheus.Labels{
+func generateResultLabels(policy kyverno.Policy, rule *kyverno.Rule) prometheus.Labels {
+	return prometheus.Labels{
 		"namespace":               policy.Namespace,
 		"kind":                    policy.Kind,
 		"policy":                  policy.Name,
@@ -51,6 +51,4 @@ func generateResultLabels(policy *kyverno.Policy, rule *kyverno.Rule) prometheus
 		"rule":                    rule.Name,
 		"type":                    rule.Type,
 	}
-
-	return labels
 }

@@ -43,7 +43,7 @@ func Test_PolicyAPI(t *testing.T) {
 			Name:            "autogen-check-for-requests-and-limits",
 		}
 
-		policy := &kyverno.Policy{
+		policy := kyverno.Policy{
 			Kind:              "Policy",
 			Name:              "require-ressources",
 			Namespace:         "test",
@@ -78,7 +78,7 @@ func Test_HealthzAPI(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(api.HealthzHandler(map[string]bool{"Policy": true}))
+		handler := http.HandlerFunc(api.HealthzHandler(func() bool { return true }))
 
 		handler.ServeHTTP(rr, req)
 
@@ -99,7 +99,7 @@ func Test_HealthzAPI(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		handler := api.HealthzHandler(map[string]bool{})
+		handler := api.HealthzHandler(func() bool { return false })
 
 		handler.ServeHTTP(rr, req)
 
@@ -164,7 +164,7 @@ func Test_VerifyImageRulesAPI(t *testing.T) {
 			Name:            "autogen-check-for-requests-and-limits",
 		}
 
-		policy := &kyverno.Policy{
+		policy := kyverno.Policy{
 			Kind:              "Policy",
 			Name:              "require-ressources",
 			Namespace:         "test",
@@ -211,7 +211,7 @@ func Test_VerifyImageRulesAPI(t *testing.T) {
 			},
 		}
 
-		policy := &kyverno.Policy{
+		policy := kyverno.Policy{
 			Kind:              "Policy",
 			Name:              "check-image",
 			Namespace:         "test",

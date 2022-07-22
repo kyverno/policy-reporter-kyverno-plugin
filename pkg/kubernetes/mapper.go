@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"errors"
 	"strings"
 	"time"
 
@@ -12,29 +11,20 @@ import (
 // Mapper converts maps into report structs
 type Mapper interface {
 	// MapPolicy maps a map into a Policy
-	MapPolicy(reportMap map[string]interface{}) *kyverno.Policy
+	MapPolicy(reportMap map[string]interface{}) kyverno.Policy
 }
 
 type mapper struct{}
 
-func (m *mapper) MapPolicy(policy map[string]interface{}) *kyverno.Policy {
-	r := &kyverno.Policy{
-		Kind:  policy["kind"].(string),
-		Rules: make([]*kyverno.Rule, 0),
-	}
-
+func (m *mapper) MapPolicy(policy map[string]interface{}) kyverno.Policy {
 	metadata := policy["metadata"].(map[string]interface{})
 
-	if name, ok := metadata["name"]; ok {
-		r.Name = name.(string)
-	}
-
-	if uid, ok := metadata["uid"]; ok {
-		r.UID = uid.(string)
-	}
-
-	if namespace, ok := metadata["namespace"]; ok {
-		r.Namespace = namespace.(string)
+	r := kyverno.Policy{
+		Kind:      policy["kind"].(string),
+		Rules:     make([]*kyverno.Rule, 0),
+		Name:      toString(metadata["name"]),
+		UID:       toString(metadata["uid"]),
+		Namespace: toString(metadata["namespace"]),
 	}
 
 	if an, ok := metadata["annotations"]; ok {
@@ -59,18 +49,15 @@ func (m *mapper) MapPolicy(policy map[string]interface{}) *kyverno.Policy {
 		}
 	}
 
-	if creationTimestamp, err := m.mapCreationTime(policy); err == nil {
+	if creationTimestamp, err := m.mapCreationTime(metadata); err == nil {
 		r.CreationTimestamp = creationTimestamp
 	}
 
 	spec := policy["spec"].(map[string]interface{})
 
-	if background, ok := spec["background"]; ok {
-		r.Background = background.(bool)
-	}
-	if validation, ok := spec["validationFailureAction"]; ok {
-		r.ValidationFailureAction = validation.(string)
-	}
+	r.Background = toBool(spec["background"])
+	r.ValidationFailureAction = toString(spec["validationFailureAction"])
+
 	if rules, ok := spec["rules"].([]interface{}); ok {
 		for _, ruleMap := range rules {
 			r.Rules = append(r.Rules, m.mapRule(ruleMap.(map[string]interface{})))
@@ -89,13 +76,10 @@ func (m *mapper) MapPolicy(policy map[string]interface{}) *kyverno.Policy {
 }
 
 func (m *mapper) mapRule(rule map[string]interface{}) *kyverno.Rule {
-	r := &kyverno.Rule{}
-
-	if name, ok := rule["name"]; ok {
-		if n, ok := name.(string); ok {
-			r.Name = n
-		}
+	r := &kyverno.Rule{
+		Name: toString(rule["name"]),
 	}
+
 	if verifyImages, ok := rule["verifyImages"]; ok {
 		r.Type = "validation"
 		r.VerifyImages = make([]*kyverno.VerifyImage, 0)
@@ -106,16 +90,12 @@ func (m *mapper) mapRule(rule map[string]interface{}) *kyverno.Rule {
 
 		for _, d := range data {
 			if verify, ok := d.(map[string]interface{}); ok {
-				item := &kyverno.VerifyImage{}
-				if repo, ok := verify["repository"].(string); ok {
-					item.Repository = repo
+				item := &kyverno.VerifyImage{
+					Repository: toString(verify["repository"]),
+					Image:      toString(verify["image"]),
+					Key:        strings.TrimSpace(toString(verify["key"])),
 				}
-				if image, ok := verify["image"].(string); ok {
-					item.Image = image
-				}
-				if key, ok := verify["key"].(string); ok {
-					item.Key = strings.TrimSpace(key)
-				}
+
 				if attestations, ok := verify["attestations"].([]interface{}); ok && len(attestations) > 0 {
 					value, err := yaml.Marshal(map[string]interface{}{"attestations": attestations})
 					if err == nil {
@@ -130,11 +110,7 @@ func (m *mapper) mapRule(rule map[string]interface{}) *kyverno.Rule {
 	}
 	if validate, ok := rule["validate"]; ok {
 		r.Type = "validation"
-
-		message := validate.(map[string]interface{})["message"]
-		if m, ok := message.(string); ok {
-			r.ValidateMessage = m
-		}
+		r.ValidateMessage = toString(validate.(map[string]interface{})["message"])
 
 		return r
 	}
@@ -154,19 +130,27 @@ func (m *mapper) mapRule(rule map[string]interface{}) *kyverno.Rule {
 	return r
 }
 
-func (m *mapper) mapCreationTime(result map[string]interface{}) (time.Time, error) {
-	if metadata, ok := result["metadata"].(map[string]interface{}); ok {
-		if created, ok2 := metadata["creationTimestamp"].(string); ok2 {
-			return time.Parse("2006-01-02T15:04:05Z", created)
-		}
-
-		return time.Time{}, errors.New("Missing creationTimestamp in Metadata")
-	}
-
-	return time.Time{}, errors.New("Missing metadata")
+func (m *mapper) mapCreationTime(metadata map[string]interface{}) (time.Time, error) {
+	return time.Parse("2006-01-02T15:04:05Z", toString(metadata["creationTimestamp"]))
 }
 
 // NewMapper creates an new Mapper instance
 func NewMapper() Mapper {
 	return &mapper{}
+}
+
+func toString(value any) string {
+	if v, ok := value.(string); ok {
+		return v
+	}
+
+	return ""
+}
+
+func toBool(value any) bool {
+	if v, ok := value.(bool); ok {
+		return v
+	}
+
+	return false
 }

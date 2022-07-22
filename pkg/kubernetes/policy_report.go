@@ -51,7 +51,7 @@ func (p *policyReportClient) handleNamespaced(ctx context.Context, violation kyv
 	}
 
 	if polr.Results == nil {
-		polr.Results = []*v1alpha2.PolicyReportResult{}
+		polr.Results = []v1alpha2.PolicyReportResult{}
 	}
 	if len(polr.Results) >= p.maxResults {
 		startIndex := len(polr.Results) - p.maxResults + 1
@@ -96,7 +96,7 @@ func (p *policyReportClient) handleClusterScoped(ctx context.Context, violation 
 	}
 
 	if polr.Results == nil {
-		polr.Results = []*v1alpha2.PolicyReportResult{}
+		polr.Results = []v1alpha2.PolicyReportResult{}
 	}
 	if len(polr.Results) >= p.maxResults {
 		startIndex := len(polr.Results) - p.maxResults + 1
@@ -124,8 +124,8 @@ func (p *policyReportClient) handleClusterScoped(ctx context.Context, violation 
 	return nil
 }
 
-func buildResult(violation kyverno.PolicyViolation, source string) *v1alpha2.PolicyReportResult {
-	return &v1alpha2.PolicyReportResult{
+func buildResult(violation kyverno.PolicyViolation, source string) v1alpha2.PolicyReportResult {
+	return v1alpha2.PolicyReportResult{
 		Source:   source,
 		Policy:   violation.Policy.Name,
 		Rule:     violation.Policy.Rule,
@@ -133,7 +133,7 @@ func buildResult(violation kyverno.PolicyViolation, source string) *v1alpha2.Pol
 		Severity: v1alpha2.PolicySeverity(violation.Policy.Severity),
 		Message:  violation.Policy.Message,
 		Result:   "fail",
-		Resources: []*corev1.ObjectReference{
+		Resources: []corev1.ObjectReference{
 			{
 				Kind:      violation.Resource.Kind,
 				Namespace: violation.Resource.Namespace,
@@ -148,7 +148,7 @@ func buildResult(violation kyverno.PolicyViolation, source string) *v1alpha2.Pol
 	}
 }
 
-func prevIndex(results []*v1alpha2.PolicyReportResult, violation kyverno.PolicyViolation) int {
+func prevIndex(results []v1alpha2.PolicyReportResult, violation kyverno.PolicyViolation) int {
 	for index, result := range results {
 		if result.Properties["eventName"] == violation.Event.Name {
 			return index

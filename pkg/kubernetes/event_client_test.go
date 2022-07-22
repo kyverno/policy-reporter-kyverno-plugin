@@ -39,7 +39,7 @@ var (
 		LastTimestamp: updatedAt,
 	}
 
-	basePolicy = &kyverno.Policy{
+	basePolicy = kyverno.Policy{
 		Name:              "require-request-and-limits",
 		Kind:              "ClusterPolicy",
 		Category:          "Best Practices",

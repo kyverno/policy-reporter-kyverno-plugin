@@ -4,30 +4,32 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/fake"
 )
 
 var (
-	policySchema = schema.GroupVersionResource{
+	clusterPolicySchema = schema.GroupVersionResource{
 		Group:    "kyverno.io",
 		Version:  "v1",
 		Resource: "clusterpolicies",
 	}
 
-	clusterPolicySchema = schema.GroupVersionResource{
+	policySchema = schema.GroupVersionResource{
 		Group:    "kyverno.io",
 		Version:  "v1",
 		Resource: "policies",
+	}
+
+	gvrToListKind = map[schema.GroupVersionResource]string{
+		policySchema:        "PolicyList",
+		clusterPolicySchema: "ClusterPolicyList",
 	}
 )
 
@@ -57,46 +59,41 @@ func newStore(size int) *store {
 	}
 }
 
-var gvrToListKind = map[schema.GroupVersionResource]string{
-	policySchema:        "PolicyList",
-	clusterPolicySchema: "ClusterPolicyList",
-}
-
-func NewFakeCilent() (dynamic.Interface, dynamic.ResourceInterface) {
+func NewFakeCilent() (dynamic.Interface, dynamic.ResourceInterface, dynamic.ResourceInterface) {
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind)
 
-	return client, client.Resource(clusterPolicySchema)
-}
-
-func NewPolicyUnstructured(policy string) unstructured.Unstructured {
-	obj := unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(policy), nil, &obj)
-
-	return obj
+	return client, client.Resource(clusterPolicySchema), client.Resource(policySchema).Namespace("test")
 }
 
 func Test_PolicyWatcher(t *testing.T) {
 	ctx := context.Background()
-	kclient, pclient := NewFakeCilent()
+	stop := make(chan struct{})
+	defer close(stop)
 
-	client := kubernetes.NewPolicyClient(kclient, kubernetes.NewMapper(), time.Millisecond)
+	kclient, _, pclient := NewFakeCilent()
 
 	store := newStore(3)
-	eventChan := client.StartWatching(ctx)
+	eventChan := make(chan kyverno.LifecycleEvent)
 
-	pol := NewPolicyUnstructured(policy)
-	minPol := NewPolicyUnstructured(minPolicy)
+	publisher := kyverno.NewEventPublisher()
+	publisher.RegisterListener(func(le kyverno.LifecycleEvent) {
+		eventChan <- le
+	})
 
-	t.Run("GetFoundResources", func(t *testing.T) {
-		found := client.GetFoundResources()
-		if len(found) != 2 {
-			t.Errorf("Expected 2 found resources, got %d", len(found))
+	client := kubernetes.NewPolicyClient(kclient, kubernetes.NewMapper(), publisher)
+	err := client.Run(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("HasSynced", func(t *testing.T) {
+		if !client.HasSynced() {
+			t.Errorf("Expected sync success")
 		}
 	})
 
 	t.Run("AddListener", func(t *testing.T) {
-		pclient.Create(ctx, &pol, v1.CreateOptions{})
+		pclient.Create(ctx, convert(minPolicy), metav1.CreateOptions{})
 
 		store.Add(<-eventChan)
 
@@ -106,7 +103,7 @@ func Test_PolicyWatcher(t *testing.T) {
 	})
 
 	t.Run("UpdateListener", func(t *testing.T) {
-		pclient.Update(ctx, &minPol, v1.UpdateOptions{})
+		pclient.Update(ctx, convert(nsPolicy), metav1.UpdateOptions{})
 
 		store.Add(<-eventChan)
 
@@ -116,7 +113,65 @@ func Test_PolicyWatcher(t *testing.T) {
 	})
 
 	t.Run("DeleteListener", func(t *testing.T) {
-		pclient.Delete(ctx, "disallow-host-path", v1.DeleteOptions{})
+		pclient.Delete(ctx, "disallow-host-path", metav1.DeleteOptions{})
+
+		store.Add(<-eventChan)
+
+		if len(store.List()) != 3 {
+			t.Error("Should receive Delete Event")
+		}
+	})
+}
+
+func Test_ClusterPolicyWatcher(t *testing.T) {
+	ctx := context.Background()
+	stop := make(chan struct{})
+	defer close(stop)
+
+	kclient, pclient, _ := NewFakeCilent()
+
+	store := newStore(3)
+	eventChan := make(chan kyverno.LifecycleEvent)
+
+	publisher := kyverno.NewEventPublisher()
+	publisher.RegisterListener(func(le kyverno.LifecycleEvent) {
+		eventChan <- le
+	})
+
+	client := kubernetes.NewPolicyClient(kclient, kubernetes.NewMapper(), publisher)
+	err := client.Run(stop)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("HasSynced", func(t *testing.T) {
+		if !client.HasSynced() {
+			t.Errorf("Expected sync success")
+		}
+	})
+
+	t.Run("AddListener", func(t *testing.T) {
+		pclient.Create(ctx, convert(clusterPolicy), metav1.CreateOptions{})
+
+		store.Add(<-eventChan)
+
+		if len(store.List()) != 1 {
+			t.Error("Should receive Add Event")
+		}
+	})
+
+	t.Run("UpdateListener", func(t *testing.T) {
+		pclient.Update(ctx, convert(minClusterPolicy), metav1.UpdateOptions{})
+
+		store.Add(<-eventChan)
+
+		if len(store.List()) != 2 {
+			t.Error("Should receive Update Event")
+		}
+	})
+
+	t.Run("DeleteListener", func(t *testing.T) {
+		pclient.Delete(ctx, "disallow-host-path", metav1.DeleteOptions{})
 
 		store.Add(<-eventChan)
 

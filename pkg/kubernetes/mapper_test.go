@@ -5,218 +5,12 @@ import (
 	"testing"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 )
 
-var policy = `
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  annotations:
-    pod-policies.kyverno.io/autogen-controllers: Deployment
-    meta.helm.sh/release-name: kyverno
-    meta.helm.sh/release-namespace: kyverno
-    policies.kyverno.io/severity: medium
-    policies.kyverno.io/category: Pod Security Standards (Default)
-    policies.kyverno.io/description: HostPath volumes let pods use host directories
-      and volumes in containers. Using host resources can be used to access shared
-      data or escalate privileges and should not be allowed.
-  creationTimestamp: "2021-03-31T13:42:01Z"
-  generation: 1
-  labels:
-    app.kubernetes.io/managed-by: Helm
-  name: disallow-host-path
-  resourceVersion: "61655872"
-  uid: 953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7
-spec:
-  background: true
-  rules:
-  - match:
-      resources:
-        kinds:
-        - Pod
-    name: host-path
-    validate:
-      message: HostPath volumes are forbidden. The fields spec.volumes[*].hostPath
-        must not be set.
-      pattern:
-        spec:
-          =(volumes):
-          - X(hostPath): "null"
-  validationFailureAction: audit
-`
-
-var minPolicy = `
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  creationTimestamp: "2021-03-31T13:42:01Z"
-  name: disallow-host-path
-  resourceVersion: "61655872"
-  uid: 953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7
-spec:
-  background: true
-  rules:
-  - match:
-      resources:
-        kinds:
-        - Pod
-    validate:
-      message:
-      pattern:
-        spec:
-          =(volumes):
-          - X(hostPath): "null"
-`
-
-var nsPolicy = `
-apiVersion: kyverno.io/v1
-kind: Policy
-metadata:
-  creationTimestamp: "2021-03-31T13:42:01Z"
-  name: disallow-host-path
-  resourceVersion: "61655872"
-  uid: 953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7
-  namespace: "test"
-spec:
-  background: true
-  rules:
-  - match:
-      resources:
-        kinds:
-        - Pod
-    validate:
-      message:
-      pattern:
-        spec:
-          =(volumes):
-          - X(hostPath): "null"
-          rules:
-          - match:
-              resources:
-                kinds:
-                - Pod
-            validate:
-              message:
-              pattern:
-                spec:
-                  =(volumes):
-                  - X(hostPath): "null"
-  - match:
-      resources:
-        kinds:
-        - Pod
-`
-
-var genPolicy = `
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  annotations:
-    pod-policies.kyverno.io/autogen-controllers: DaemonSet,Deployment,Job,StatefulSet,CronJob
-  creationTimestamp: "2021-03-31T14:51:14Z"
-  generation: 2
-  labels:
-    app.kubernetes.io/managed-by: Helm
-  name: prod-env-deny-all-traffic
-  uid: 5c569b21-9e51-48a2-b7b1-0af0518119e0
-spec:
-  background: false
-  rules:
-  - generate:
-      data:
-        spec:
-          podSelector: {}
-          policyTypes:
-          - Ingress
-          - Egress
-      kind: NetworkPolicy
-      name: deny-all-traffic
-      namespace: '{{request.object.metadata.name}}'
-    match:
-      resources:
-        kinds:
-        - Namespace
-        selector:
-          matchLabels:
-            env: production
-    name: deny-all-traffic
-  validationFailureAction: audit
-`
-
-var mutPolicy = `
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  annotations:
-    pod-policies.kyverno.io/autogen-controllers: DaemonSet,Deployment,Job,StatefulSet,CronJob
-  name: add-env-label
-  uid: 139bd7d1-88d9-4a3c-8f4a-705067f59ee9
-spec:
-  background: true
-  rules:
-  - match:
-      resources:
-        kinds:
-        - Namespace
-        name: prod*
-    mutate:
-      patchStrategicMerge:
-        metadata:
-          labels:
-            env: production
-    name: add production label
-  validationFailureAction: audit
-`
-
-var veriyPolicy = `
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  name: check-image
-spec:
-  validationFailureAction: enforce
-  background: false
-  webhookTimeoutSeconds: 30
-  failurePolicy: Fail
-  rules:
-    - name: check-image
-      match:
-        resources:
-          kinds:
-            - Pod
-      verifyImages:
-      - image: "ghcr.io/kyverno/test-verify-image:*"
-        repository: "registry.io/signatures"
-        key: |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-        attestations:
-          - predicateType: https://example.com/CodeReview/v1
-            conditions:
-              - all:
-                - key: "{{ repo.uri }}"
-                  operator: Equals
-                  value: "https://git-repo.com/org/app"            
-                - key: "{{ repo.branch }}"
-                  operator: Equals
-                  value: "main"
-                - key: "{{ reviewers }}"
-                  operator: In
-                  value: ["ana@example.com", "bob@example.com"]
-`
-
 func Test_MapPolicy(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(policy), nil, obj)
-
 	mapper := kubernetes.NewMapper()
 
-	pol := mapper.MapPolicy(obj.Object)
+	pol := mapper.MapPolicy(convert(clusterPolicy).Object)
 
 	if pol.Kind != "ClusterPolicy" {
 		t.Errorf("Expected Kind 'ClusterPolicy', got %s", pol.Kind)
@@ -255,29 +49,22 @@ func Test_MapPolicy(t *testing.T) {
 	}
 }
 
-func Test_MapMinPolicy(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(nsPolicy), nil, obj)
-
+func Test_MapMinClusterPolicy(t *testing.T) {
 	mapper := kubernetes.NewMapper()
 
-	pol := mapper.MapPolicy(obj.Object)
+	pol := mapper.MapPolicy(convert(minClusterPolicy).Object)
 
-	if pol.Kind != "Policy" {
+	if pol.Kind != "ClusterPolicy" {
 		t.Errorf("Expected Kind 'Policy', go %s", pol.Kind)
 	}
 	if pol.Name != "disallow-host-path" {
 		t.Errorf("Expected Name 'disallow-host-path', go %s", pol.Name)
 	}
-	if !pol.Background {
-		t.Errorf("Expected Background 'true', go false")
+	if pol.Background {
+		t.Errorf("Expected Background 'false', go true")
 	}
 	if pol.UID != "953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7" {
 		t.Errorf("Expected UID '953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7', go %s", pol.UID)
-	}
-	if pol.Namespace != "test" {
-		t.Errorf("Expected UID 'test', go %s", pol.Namespace)
 	}
 
 	rule := pol.Rules[0]
@@ -293,13 +80,9 @@ func Test_MapMinPolicy(t *testing.T) {
 }
 
 func Test_MapGeneratePolicy(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(genPolicy), nil, obj)
-
 	mapper := kubernetes.NewMapper()
 
-	pol := mapper.MapPolicy(obj.Object)
+	pol := mapper.MapPolicy(convert(genPolicy).Object)
 
 	rule := pol.Rules[0]
 	if rule.Type != "generation" {
@@ -308,13 +91,9 @@ func Test_MapGeneratePolicy(t *testing.T) {
 }
 
 func Test_MapMutatePolicy(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(mutPolicy), nil, obj)
-
 	mapper := kubernetes.NewMapper()
 
-	pol := mapper.MapPolicy(obj.Object)
+	pol := mapper.MapPolicy(convert(mutPolicy).Object)
 
 	rule := pol.Rules[0]
 	if rule.Type != "mutation" {
@@ -322,29 +101,10 @@ func Test_MapMutatePolicy(t *testing.T) {
 	}
 }
 
-func Test_MapEmptyPolicy(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(nsPolicy), nil, obj)
-
-	mapper := kubernetes.NewMapper()
-
-	pol := mapper.MapPolicy(obj.Object)
-
-	rule := pol.Rules[1]
-	if rule.Type != "" {
-		t.Errorf("Expected Rule Type 'empty', got %s", rule.Type)
-	}
-}
-
 func Test_MapVerifyImagePolicy(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	dec.Decode([]byte(veriyPolicy), nil, obj)
-
 	mapper := kubernetes.NewMapper()
 
-	pol := mapper.MapPolicy(obj.Object)
+	pol := mapper.MapPolicy(convert(veriyPolicy).Object)
 
 	rule := pol.Rules[0]
 

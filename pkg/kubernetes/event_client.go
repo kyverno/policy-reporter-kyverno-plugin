@@ -87,7 +87,7 @@ func (e *eventClient) watchEvents(ctx context.Context, violationChan chan<- kyve
 	informer.Run(ctx.Done())
 }
 
-func ConvertEvent(event *corev1.Event, policy *kyverno.Policy, updated bool) kyverno.PolicyViolation {
+func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) kyverno.PolicyViolation {
 	parts := strings.Split(event.Message, " ")
 	resourceParts := strings.Split(parts[1][0:len(parts[1])-1], "/")
 

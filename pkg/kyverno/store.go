@@ -6,12 +6,12 @@ import (
 
 // PolicyStore persists the last state of a Policy in memory
 type PolicyStore struct {
-	store map[string]*Policy
+	store map[string]Policy
 	rwm   *sync.RWMutex
 }
 
 // Get a Policy from the Store by ID
-func (s *PolicyStore) Get(id string) (*Policy, bool) {
+func (s *PolicyStore) Get(id string) (Policy, bool) {
 	s.rwm.RLock()
 	r, ok := s.store[id]
 	s.rwm.RUnlock()
@@ -20,9 +20,9 @@ func (s *PolicyStore) Get(id string) (*Policy, bool) {
 }
 
 // List all stored Policies
-func (s *PolicyStore) List() []*Policy {
+func (s *PolicyStore) List() []Policy {
 	s.rwm.RLock()
-	list := make([]*Policy, 0, len(s.store))
+	list := make([]Policy, 0, len(s.store))
 
 	for _, r := range s.store {
 		list = append(list, r)
@@ -33,7 +33,7 @@ func (s *PolicyStore) List() []*Policy {
 }
 
 // Add a Policy to the store
-func (s *PolicyStore) Add(r *Policy) {
+func (s *PolicyStore) Add(r Policy) {
 	s.rwm.Lock()
 	s.store[r.UID] = r
 	s.rwm.Unlock()
@@ -49,7 +49,7 @@ func (s *PolicyStore) Remove(id string) {
 // NewPolicyStore returns a pointer to a new in memory store
 func NewPolicyStore() *PolicyStore {
 	return &PolicyStore{
-		store: map[string]*Policy{},
+		store: map[string]Policy{},
 		rwm:   new(sync.RWMutex),
 	}
 }

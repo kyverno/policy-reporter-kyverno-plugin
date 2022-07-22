@@ -27,11 +27,11 @@ type Resolver struct {
 }
 
 // APIServer resolver method
-func (r *Resolver) APIServer(foundResources map[string]bool) api.Server {
+func (r *Resolver) APIServer(synced func() bool) api.Server {
 	return api.NewServer(
 		r.PolicyStore(),
 		r.config.API.Port,
-		foundResources,
+		synced,
 	)
 }
 
@@ -69,7 +69,7 @@ func (r *Resolver) PolicyClient() (kyverno.PolicyClient, error) {
 		return nil, err
 	}
 
-	policyClient := k8s.NewPolicyClient(client, r.Mapper(), 5*time.Second)
+	policyClient := k8s.NewPolicyClient(client, r.Mapper(), r.EventPublisher())
 
 	r.policyClient = policyClient
 

@@ -13,7 +13,7 @@ import (
 const port int = 9999
 
 func Test_NewServer(t *testing.T) {
-	server := api.NewServer(kyverno.NewPolicyStore(), port, make(map[string]bool))
+	server := api.NewServer(kyverno.NewPolicyStore(), port, func() bool { return true })
 
 	server.RegisterMetrics()
 	server.RegisterREST()

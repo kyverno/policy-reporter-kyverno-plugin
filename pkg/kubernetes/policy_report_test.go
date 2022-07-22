@@ -556,7 +556,7 @@ func Test_MaxResultLimitForClusterPolicyReportResults(t *testing.T) {
 	checkResource(polr.Results[0], violation2, t)
 }
 
-func checkResource(result *v1alpha2.PolicyReportResult, violation kyverno.PolicyViolation, t *testing.T) {
+func checkResource(result v1alpha2.PolicyReportResult, violation kyverno.PolicyViolation, t *testing.T) {
 	if result.Category != violation.Policy.Category {
 		t.Errorf("expected Category to be '%s', got %s", violation.Policy.Category, result.Category)
 	}
