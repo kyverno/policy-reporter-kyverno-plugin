@@ -1,7 +1,5 @@
 package kyverno
 
-import "context"
-
 // PolicyListener is called whenver a new Policy comes in
 type PolicyListener = func(LifecycleEvent)
 
@@ -15,6 +13,6 @@ type PolicyClient interface {
 
 // EventClient to watch for PolicyViolations in the cluster
 type EventClient interface {
-	// StartWatching watches for PolicyViolation Events and return a channel with incomming events
-	StartWatching(ctx context.Context) <-chan PolicyViolation
+	// Run watches for PolicyViolation Events
+	Run(stopper chan struct{}) error
 }

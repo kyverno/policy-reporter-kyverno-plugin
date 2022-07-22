@@ -30,3 +30,7 @@ func GeneratePolicyReportResultID(eventID string, lastTimestamp time.Time) strin
 type Client interface {
 	ProcessViolation(ctx context.Context, violation kyverno.PolicyViolation) error
 }
+
+type Publisher interface {
+	Publish()
+}

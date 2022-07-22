@@ -27,6 +27,17 @@ func Test_ResolvePolicyClient(t *testing.T) {
 	}
 }
 
+func Test_ResolveViolationPublisher(t *testing.T) {
+	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
+
+	publisher1 := resolver.ViolationPublisher()
+	publisher2 := resolver.ViolationPublisher()
+
+	if publisher1 != publisher2 {
+		t.Error("A second call resolver.ViolationPublisher() should return the cached first publisher")
+	}
+}
+
 func Test_ResolvePolicyReportClient(t *testing.T) {
 	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
 

@@ -1,12 +1,12 @@
 package kubernetes
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -16,40 +16,15 @@ import (
 )
 
 type eventClient struct {
-	client                k8s.Interface
-	policyStore           *kyverno.PolicyStore
-	restartWatchOnFailure time.Duration
-	startUp               time.Time
-	eventNamespace        string
+	publisher      kyverno.ViolationPublisher
+	factory        informers.SharedInformerFactory
+	policyStore    *kyverno.PolicyStore
+	startUp        time.Time
+	eventNamespace string
 }
 
-func (e *eventClient) StartWatching(ctx context.Context) <-chan kyverno.PolicyViolation {
-	violationChan := make(chan kyverno.PolicyViolation)
-
-	go func() {
-		for {
-			e.watchEvents(ctx, violationChan)
-			time.Sleep(e.restartWatchOnFailure)
-		}
-	}()
-
-	return violationChan
-}
-
-func (e *eventClient) watchEvents(ctx context.Context, violationChan chan<- kyverno.PolicyViolation) {
-	factory := informers.NewFilteredSharedInformerFactory(e.client, 0, e.eventNamespace, func(lo *v1.ListOptions) {
-		lo.FieldSelector = fields.Set{
-			"source": "kyverno-admission",
-			"reason": "PolicyViolation",
-			"type":   "Warning",
-		}.AsSelector().String()
-	})
-
-	informer := factory.Core().V1().Events().Informer()
-
-	informer.SetWatchErrorHandler(func(_ *cache.Reflector, _ error) {
-		log.Println("[WARNING] Event watch failure - restarting")
-	})
+func (e *eventClient) Run(stopper chan struct{}) error {
+	informer := e.factory.Core().V1().Events().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -64,7 +39,7 @@ func (e *eventClient) watchEvents(ctx context.Context, violationChan chan<- kyve
 					return
 				}
 
-				violationChan <- ConvertEvent(event, policy, false)
+				e.publisher.Publish(ConvertEvent(event, policy, false))
 			}
 		},
 		UpdateFunc: func(old interface{}, obj interface{}) {
@@ -79,12 +54,18 @@ func (e *eventClient) watchEvents(ctx context.Context, violationChan chan<- kyve
 					return
 				}
 
-				violationChan <- ConvertEvent(event, policy, true)
+				e.publisher.Publish(ConvertEvent(event, policy, true))
 			}
 		},
 	})
 
-	informer.Run(ctx.Done())
+	e.factory.Start(stopper)
+
+	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
+		return fmt.Errorf("failed to sync events")
+	}
+
+	return nil
 }
 
 func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) kyverno.PolicyViolation {
@@ -131,16 +112,19 @@ func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) kyve
 	}
 }
 
-type EventClient interface {
-	StartWatching(ctx context.Context) <-chan kyverno.PolicyViolation
-}
+func NewEventClient(client k8s.Interface, publisher kyverno.ViolationPublisher, policyStore *kyverno.PolicyStore, eventNamespace string) kyverno.EventClient {
+	factory := informers.NewFilteredSharedInformerFactory(client, 0, eventNamespace, func(lo *v1.ListOptions) {
+		lo.FieldSelector = fields.Set{
+			"source": "kyverno-admission",
+			"reason": "PolicyViolation",
+			"type":   "Warning",
+		}.AsSelector().String()
+	})
 
-func NewEventClient(client k8s.Interface, policyStore *kyverno.PolicyStore, restartWatchOnFailure time.Duration, eventNamespace string) EventClient {
 	return &eventClient{
-		client:                client,
-		policyStore:           policyStore,
-		restartWatchOnFailure: restartWatchOnFailure,
-		startUp:               time.Now(),
-		eventNamespace:        eventNamespace,
+		publisher:   publisher,
+		factory:     factory,
+		policyStore: policyStore,
+		startUp:     time.Now(),
 	}
 }
