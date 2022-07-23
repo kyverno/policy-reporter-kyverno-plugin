@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.3.2 
+## 1.4.0 
 
-* Refactor DynamicInformer logic
+* Implement LeaderElection for PolicyReport Management
+* Refactor K8s Clients
 * Update Depdencies and Workflow to Go 1.18
 
 ## 1.2.1 

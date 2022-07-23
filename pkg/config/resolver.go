@@ -1,11 +1,14 @@
 package config
 
 import (
+	"time"
+
 	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	k8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/listener"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/leaderelection"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
 	prk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
@@ -18,8 +21,10 @@ import (
 // Resolver manages dependencies
 type Resolver struct {
 	config       *Config
+	clientset    *kubernetes.Clientset
 	k8sConfig    *rest.Config
 	mapper       k8s.Mapper
+	leaderClient *leaderelection.Client
 	policyStore  *kyverno.PolicyStore
 	policyClient kyverno.PolicyClient
 	eventClient  violation.EventClient
@@ -89,9 +94,9 @@ func (r *Resolver) PolicyClient() (kyverno.PolicyClient, error) {
 }
 
 // EventClient resolver method
-func (r *Resolver) EventClient() (violation.EventClient, error) {
-	if r.eventClient != nil {
-		return r.eventClient, nil
+func (r *Resolver) Clientset() (*kubernetes.Clientset, error) {
+	if r.clientset != nil {
+		return r.clientset, nil
 	}
 
 	clientset, err := kubernetes.NewForConfig(r.k8sConfig)
@@ -99,11 +104,50 @@ func (r *Resolver) EventClient() (violation.EventClient, error) {
 		return nil, err
 	}
 
-	eventClient := vk8s.NewClient(clientset, r.ViolationPublisher(), r.PolicyStore(), r.config.BlockReports.EventNamespace)
+	r.clientset = clientset
 
-	r.eventClient = eventClient
+	return r.clientset, nil
+}
 
-	return eventClient, nil
+// LeaderElectionClient resolver method
+func (r *Resolver) LeaderElectionClient() (*leaderelection.Client, error) {
+	if r.leaderClient != nil {
+		return r.leaderClient, nil
+	}
+
+	clientset, err := r.Clientset()
+	if err != nil {
+		return nil, err
+	}
+
+	r.leaderClient = leaderelection.New(
+		clientset.CoordinationV1(),
+		r.config.LeaderElection.LockName,
+		r.config.LeaderElection.Namespace,
+		r.config.LeaderElection.PodName,
+		time.Duration(r.config.LeaderElection.LeaseDuration)*time.Second,
+		time.Duration(r.config.LeaderElection.RenewDeadline)*time.Second,
+		time.Duration(r.config.LeaderElection.RetryPeriod)*time.Second,
+		r.config.LeaderElection.ReleaseOnCancel,
+	)
+
+	return r.leaderClient, nil
+}
+
+// EventClient resolver method
+func (r *Resolver) EventClient() (violation.EventClient, error) {
+	if r.eventClient != nil {
+		return r.eventClient, nil
+	}
+
+	clientset, err := r.Clientset()
+	if err != nil {
+		return nil, err
+	}
+
+	r.eventClient = vk8s.NewClient(clientset, r.ViolationPublisher(), r.PolicyStore(), r.config.BlockReports.EventNamespace)
+
+	return r.eventClient, nil
 }
 
 // PolicyReportClient resolver method

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 )
 
 func newRunCMD() *cobra.Command {
@@ -72,13 +73,37 @@ func newRunCMD() *cobra.Command {
 					policyReportClient.ProcessViolation(ctx, pv)
 				})
 
-				stop := make(chan struct{})
+				var stop chan struct{}
 				defer close(stop)
 
-				err = eventClient.Run(stop)
+				leClient, err := resolver.LeaderElectionClient()
 				if err != nil {
 					return err
 				}
+
+				leClient.RegisterOnStart(func(c context.Context) {
+					klog.Info("started leadership")
+
+					stop = make(chan struct{})
+
+					err = eventClient.Run(stop)
+					if err != nil {
+						log.Printf("[ERROR] failed to run EventClient: %s\n", err)
+					}
+				})
+
+				leClient.RegisterOnNew(func(currentID, lockID string) {
+					if currentID != lockID {
+						klog.Infof("leadership by %s", currentID)
+					}
+				})
+
+				leClient.RegisterOnStop(func() {
+					klog.Info("stopped leadership")
+					close(stop)
+				})
+
+				go leClient.Run(cmd.Context())
 			}
 
 			stop := make(chan struct{})
@@ -104,6 +129,7 @@ func newRunCMD() *cobra.Command {
 	cmd.PersistentFlags().IntP("port", "p", 8080, "http port for the rest api")
 	cmd.PersistentFlags().BoolP("metrics-enabled", "m", false, "Enable Metrics API")
 	cmd.PersistentFlags().BoolP("rest-enabled", "r", false, "Enable REST API")
+	cmd.PersistentFlags().String("lease-name", "policy-reporter-kyverno-plugin", "name of the LeaseLock")
 
 	flag.Parse()
 
