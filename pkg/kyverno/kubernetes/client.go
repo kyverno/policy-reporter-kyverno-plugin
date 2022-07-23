@@ -28,7 +28,7 @@ var (
 )
 
 type policyClient struct {
-	publisher kyverno.EventPublisher
+	publisher *kyverno.EventPublisher
 	fatcory   dynamicinformer.DynamicSharedInformerFactory
 	mapper    Mapper
 	synced    bool
@@ -125,8 +125,8 @@ func (c *policyClient) configureClusterPolicy() cache.SharedIndexInformer {
 	return polrInformer
 }
 
-// NewPolicyClient creates a new PolicyClient based on the kubernetes go-client
-func NewPolicyClient(client dynamic.Interface, mapper Mapper, publisher kyverno.EventPublisher) kyverno.PolicyClient {
+// NewClient creates a new PolicyClient based on the kubernetes go-client
+func NewClient(client dynamic.Interface, mapper Mapper, publisher *kyverno.EventPublisher) kyverno.PolicyClient {
 	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(client, time.Hour, corev1.NamespaceAll, nil)
 
 	return &policyClient{

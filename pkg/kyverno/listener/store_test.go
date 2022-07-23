@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/listener"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/listener"
 )
 
 func Test_StoreListener(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -68,7 +68,7 @@ func newRunCMD() *cobra.Command {
 					return err
 				}
 
-				resolver.ViolationPublisher().RegisterListener(func(pv kyverno.PolicyViolation) {
+				resolver.ViolationPublisher().RegisterListener(func(pv violation.PolicyViolation) {
 					policyReportClient.ProcessViolation(ctx, pv)
 				})
 

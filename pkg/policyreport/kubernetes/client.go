@@ -5,8 +5,8 @@ import (
 
 	"github.com/kyverno/kyverno/api/policyreport/v1alpha2"
 	pr "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ type policyReportClient struct {
 	keepOnlyLatest bool
 }
 
-func (p *policyReportClient) ProcessViolation(ctx context.Context, violation kyverno.PolicyViolation) error {
+func (p *policyReportClient) ProcessViolation(ctx context.Context, violation violation.PolicyViolation) error {
 	if violation.Resource.Namespace == "" {
 		return p.handleClusterScoped(ctx, violation)
 	}
@@ -33,7 +33,7 @@ func (p *policyReportClient) ProcessViolation(ctx context.Context, violation kyv
 	return p.handleNamespaced(ctx, violation, violation.Resource.Namespace)
 }
 
-func (p *policyReportClient) handleNamespaced(ctx context.Context, violation kyverno.PolicyViolation, ns string) error {
+func (p *policyReportClient) handleNamespaced(ctx context.Context, violation violation.PolicyViolation, ns string) error {
 	polr, err := p.client.PolicyReports(ns).Get(ctx, policyreport.GeneratePolicyReportName(ns), v1.GetOptions{})
 	if err != nil {
 		polr = &v1alpha2.PolicyReport{
@@ -79,7 +79,7 @@ func (p *policyReportClient) handleNamespaced(ctx context.Context, violation kyv
 	return nil
 }
 
-func (p *policyReportClient) handleClusterScoped(ctx context.Context, violation kyverno.PolicyViolation) error {
+func (p *policyReportClient) handleClusterScoped(ctx context.Context, violation violation.PolicyViolation) error {
 	polr, err := p.client.ClusterPolicyReports().Get(ctx, policyreport.ClusterPolicyReport, v1.GetOptions{})
 	if err != nil {
 		polr = &v1alpha2.ClusterPolicyReport{
@@ -124,7 +124,7 @@ func (p *policyReportClient) handleClusterScoped(ctx context.Context, violation 
 	return nil
 }
 
-func buildResult(violation kyverno.PolicyViolation, source string) v1alpha2.PolicyReportResult {
+func buildResult(violation violation.PolicyViolation, source string) v1alpha2.PolicyReportResult {
 	return v1alpha2.PolicyReportResult{
 		Source:   source,
 		Policy:   violation.Policy.Name,
@@ -148,7 +148,7 @@ func buildResult(violation kyverno.PolicyViolation, source string) v1alpha2.Poli
 	}
 }
 
-func prevIndex(results []v1alpha2.PolicyReportResult, violation kyverno.PolicyViolation) int {
+func prevIndex(results []v1alpha2.PolicyReportResult, violation violation.PolicyViolation) int {
 	for index, result := range results {
 		if result.Properties["eventName"] == violation.Event.Name {
 			return index
@@ -158,7 +158,7 @@ func prevIndex(results []v1alpha2.PolicyReportResult, violation kyverno.PolicyVi
 	return -1
 }
 
-func NewPolicyReportClient(client pr.Wgpolicyk8sV1alpha2Interface, maxResults int, source string, keepOnlyLatest bool) policyreport.Client {
+func NewClient(client pr.Wgpolicyk8sV1alpha2Interface, maxResults int, source string, keepOnlyLatest bool) policyreport.Client {
 	return &policyReportClient{
 		client:         client,
 		maxResults:     maxResults,

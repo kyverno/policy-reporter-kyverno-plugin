@@ -3,10 +3,13 @@ package config
 import (
 	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
-	k8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/listener"
+	k8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/listener"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
+	prk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
+	vk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,10 +22,10 @@ type Resolver struct {
 	mapper       k8s.Mapper
 	policyStore  *kyverno.PolicyStore
 	policyClient kyverno.PolicyClient
-	eventClient  kyverno.EventClient
+	eventClient  violation.EventClient
 	polrClient   policyreport.Client
-	publisher    kyverno.EventPublisher
-	vPulisher    kyverno.ViolationPublisher
+	publisher    *kyverno.EventPublisher
+	vPulisher    *violation.Publisher
 }
 
 // APIServer resolver method
@@ -46,7 +49,7 @@ func (r *Resolver) PolicyStore() *kyverno.PolicyStore {
 }
 
 // EventPublisher resolver method
-func (r *Resolver) EventPublisher() kyverno.EventPublisher {
+func (r *Resolver) EventPublisher() *kyverno.EventPublisher {
 	if r.publisher != nil {
 		return r.publisher
 	}
@@ -57,12 +60,12 @@ func (r *Resolver) EventPublisher() kyverno.EventPublisher {
 }
 
 // EventPublisher resolver method
-func (r *Resolver) ViolationPublisher() kyverno.ViolationPublisher {
+func (r *Resolver) ViolationPublisher() *violation.Publisher {
 	if r.vPulisher != nil {
 		return r.vPulisher
 	}
 
-	r.vPulisher = kyverno.NewViolationPublisher()
+	r.vPulisher = violation.NewPublisher()
 
 	return r.vPulisher
 }
@@ -78,7 +81,7 @@ func (r *Resolver) PolicyClient() (kyverno.PolicyClient, error) {
 		return nil, err
 	}
 
-	policyClient := k8s.NewPolicyClient(client, r.Mapper(), r.EventPublisher())
+	policyClient := k8s.NewClient(client, r.Mapper(), r.EventPublisher())
 
 	r.policyClient = policyClient
 
@@ -86,7 +89,7 @@ func (r *Resolver) PolicyClient() (kyverno.PolicyClient, error) {
 }
 
 // EventClient resolver method
-func (r *Resolver) EventClient() (kyverno.EventClient, error) {
+func (r *Resolver) EventClient() (violation.EventClient, error) {
 	if r.eventClient != nil {
 		return r.eventClient, nil
 	}
@@ -96,7 +99,7 @@ func (r *Resolver) EventClient() (kyverno.EventClient, error) {
 		return nil, err
 	}
 
-	eventClient := k8s.NewEventClient(clientset, r.ViolationPublisher(), r.PolicyStore(), r.config.BlockReports.EventNamespace)
+	eventClient := vk8s.NewClient(clientset, r.ViolationPublisher(), r.PolicyStore(), r.config.BlockReports.EventNamespace)
 
 	r.eventClient = eventClient
 
@@ -114,7 +117,7 @@ func (r *Resolver) PolicyReportClient() (policyreport.Client, error) {
 		return nil, err
 	}
 
-	policyreportClient := k8s.NewPolicyReportClient(
+	policyreportClient := prk8s.NewClient(
 		client,
 		r.config.BlockReports.Results.MaxPerReport,
 		r.config.BlockReports.Source,

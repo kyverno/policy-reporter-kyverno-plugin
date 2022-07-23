@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/listener"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/listener"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 )
