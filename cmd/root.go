@@ -29,6 +29,11 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	v.SetDefault("blockReports.source", "Kyverno Event")
 	v.SetDefault("blockReports.results.maxPerReport", 100)
 
+	v.SetDefault("leaderElection.releaseOnCancel", true)
+	v.SetDefault("leaderElection.leaseDuration", 15)
+	v.SetDefault("leaderElection.renewDeadline", 10)
+	v.SetDefault("leaderElection.retryPeriod", 2)
+
 	cfgFile := ""
 
 	configFlag := cmd.Flags().Lookup("config")
@@ -63,6 +68,17 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 
 	if flag := cmd.Flags().Lookup("metrics-enabled"); flag != nil {
 		v.BindPFlag("metrics.enabled", flag)
+	}
+
+	if flag := cmd.Flags().Lookup("lease-name"); flag != nil {
+		v.BindPFlag("leaderElection.lockName", flag)
+	}
+
+	if err := v.BindEnv("leaderElection.podName", "POD_NAME"); err != nil {
+		log.Printf("[WARNING] failed to bind env POD_NAME")
+	}
+	if err := v.BindEnv("leaderElection.namespace", "POD_NAMESPACE"); err != nil {
+		log.Printf("[WARNING] failed to bind env POD_NAMESPACE")
 	}
 
 	c := &config.Config{}
