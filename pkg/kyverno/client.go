@@ -10,9 +10,3 @@ type PolicyClient interface {
 	// HasSynced all CRDs
 	HasSynced() bool
 }
-
-// EventClient to watch for PolicyViolations in the cluster
-type EventClient interface {
-	// Run watches for PolicyViolation Events
-	Run(stopper chan struct{}) error
-}

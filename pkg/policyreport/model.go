@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 )
 
 const (
@@ -28,9 +28,5 @@ func GeneratePolicyReportResultID(eventID string, lastTimestamp time.Time) strin
 }
 
 type Client interface {
-	ProcessViolation(ctx context.Context, violation kyverno.PolicyViolation) error
-}
-
-type Publisher interface {
-	Publish()
+	ProcessViolation(context.Context, violation.PolicyViolation) error
 }

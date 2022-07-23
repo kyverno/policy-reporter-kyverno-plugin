@@ -8,9 +8,9 @@ import (
 	"github.com/kyverno/kyverno/api/policyreport/v1alpha2"
 	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/fake"
 	v1alpha2client "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,23 +22,23 @@ func NewPolicyReportFakeCilent() (v1alpha2client.Wgpolicyk8sV1alpha2Interface, v
 
 func Test_CreateNewPolicyReportForViolation(t *testing.T) {
 	client, polrAPI, _ := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 10, "Kyverno Event", false)
+	polrClient := kubernetes.NewClient(client, 10, "Kyverno Event", false)
 	ctx := context.Background()
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -65,25 +65,25 @@ func Test_CreateNewPolicyReportForViolation(t *testing.T) {
 
 func Test_UpdateExistingPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 	client, polrAPI, _ := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 10, "Kyverno Event", true)
+	polrClient := kubernetes.NewClient(client, 10, "Kyverno Event", true)
 	ctx := context.Background()
 	now := time.Now()
 	updated := now.Add(5 * time.Minute)
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation1 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -91,25 +91,25 @@ func Test_UpdateExistingPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 		Updated:   false,
 	}
 
-	err := polrClient.ProcessViolation(ctx, violation)
+	err := polrClient.ProcessViolation(ctx, violation1)
 	if err != nil {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation2 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation2 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -138,25 +138,25 @@ func Test_UpdateExistingPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 
 func Test_AddUpdateToPolicyReport(t *testing.T) {
 	client, polrAPI, _ := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 10, "Kyverno Event", false)
+	polrClient := kubernetes.NewClient(client, 10, "Kyverno Event", false)
 	ctx := context.Background()
 	now := time.Now()
 	updated := now.Add(5 * time.Minute)
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation1 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -164,25 +164,25 @@ func Test_AddUpdateToPolicyReport(t *testing.T) {
 		Updated:   false,
 	}
 
-	err := polrClient.ProcessViolation(ctx, violation)
+	err := polrClient.ProcessViolation(ctx, violation1)
 	if err != nil {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation2 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation2 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -204,31 +204,31 @@ func Test_AddUpdateToPolicyReport(t *testing.T) {
 		t.Errorf("expected both result in the updated PolicyReport")
 	}
 
-	checkResource(polr.Results[0], violation, t)
+	checkResource(polr.Results[0], violation1, t)
 	checkResource(polr.Results[1], violation2, t)
 }
 
 func Test_MaxResultLimitForResults(t *testing.T) {
 	client, polrAPI, _ := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 1, "Kyverno Event", false)
+	polrClient := kubernetes.NewClient(client, 1, "Kyverno Event", false)
 	ctx := context.Background()
 	now := time.Now()
 	updated := now.Add(5 * time.Minute)
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation1 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -236,25 +236,25 @@ func Test_MaxResultLimitForResults(t *testing.T) {
 		Updated:   false,
 	}
 
-	err := polrClient.ProcessViolation(ctx, violation)
+	err := polrClient.ProcessViolation(ctx, violation1)
 	if err != nil {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation2 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation2 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name:      "nginx",
 			Namespace: "test",
 			Kind:      "Pod",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "request-and-limit-required",
 			Rule:     "require-reesource-request",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "nginx.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -281,22 +281,22 @@ func Test_MaxResultLimitForResults(t *testing.T) {
 
 func Test_CreateNewClusterPolicyReportForViolation(t *testing.T) {
 	client, _, polrAPI := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 10, "Kyverno Event", false)
+	polrClient := kubernetes.NewClient(client, 10, "Kyverno Event", false)
 	ctx := context.Background()
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -323,24 +323,24 @@ func Test_CreateNewClusterPolicyReportForViolation(t *testing.T) {
 
 func Test_UpdateExistingClusterPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 	client, _, polrAPI := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 10, "Kyverno Event", true)
+	polrClient := kubernetes.NewClient(client, 10, "Kyverno Event", true)
 	ctx := context.Background()
 	now := time.Now()
 	updated := now.Add(5 * time.Minute)
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation1 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -348,24 +348,24 @@ func Test_UpdateExistingClusterPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 		Updated:   false,
 	}
 
-	err := polrClient.ProcessViolation(ctx, violation)
+	err := polrClient.ProcessViolation(ctx, violation1)
 	if err != nil {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation2 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation2 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -378,19 +378,19 @@ func Test_UpdateExistingClusterPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation3 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation3 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "dev",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "dev.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -419,24 +419,24 @@ func Test_UpdateExistingClusterPolicyReportWithoutKeepOnlyLatest(t *testing.T) {
 
 func Test_AddUpdateToClusterPolicyReport(t *testing.T) {
 	client, _, polrAPI := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 10, "Kyverno Event", false)
+	polrClient := kubernetes.NewClient(client, 10, "Kyverno Event", false)
 	ctx := context.Background()
 	now := time.Now()
 	updated := now.Add(5 * time.Minute)
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation1 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -444,24 +444,24 @@ func Test_AddUpdateToClusterPolicyReport(t *testing.T) {
 		Updated:   false,
 	}
 
-	err := polrClient.ProcessViolation(ctx, violation)
+	err := polrClient.ProcessViolation(ctx, violation1)
 	if err != nil {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation2 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation2 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -483,30 +483,30 @@ func Test_AddUpdateToClusterPolicyReport(t *testing.T) {
 		t.Errorf("expected both result in the updated PolicyReport")
 	}
 
-	checkResource(polr.Results[0], violation, t)
+	checkResource(polr.Results[0], violation1, t)
 	checkResource(polr.Results[1], violation2, t)
 }
 
 func Test_MaxResultLimitForClusterPolicyReportResults(t *testing.T) {
 	client, _, polrAPI := NewPolicyReportFakeCilent()
-	polrClient := kubernetes.NewPolicyReportClient(client, 1, "Kyverno Event", false)
+	polrClient := kubernetes.NewClient(client, 1, "Kyverno Event", false)
 	ctx := context.Background()
 	now := time.Now()
 	updated := now.Add(5 * time.Minute)
 
-	violation := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation1 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -514,24 +514,24 @@ func Test_MaxResultLimitForClusterPolicyReportResults(t *testing.T) {
 		Updated:   false,
 	}
 
-	err := polrClient.ProcessViolation(ctx, violation)
+	err := polrClient.ProcessViolation(ctx, violation1)
 	if err != nil {
 		t.Fatalf("Unexpected failure: %s", err)
 	}
 
-	violation2 := kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	violation2 := violation.PolicyViolation{
+		Resource: violation.Resource{
 			Name: "test",
 			Kind: "Namespace",
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     "ns-labels-required",
 			Rule:     "require-team-label",
 			Message:  "message",
 			Category: "Best Practices",
 			Severity: "medium",
 		},
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: "test.12345",
 			UID:  "2d81d080-d2a3-4f1d-aad8-27c2ceb2a3fa",
 		},
@@ -556,7 +556,7 @@ func Test_MaxResultLimitForClusterPolicyReportResults(t *testing.T) {
 	checkResource(polr.Results[0], violation2, t)
 }
 
-func checkResource(result v1alpha2.PolicyReportResult, violation kyverno.PolicyViolation, t *testing.T) {
+func checkResource(result v1alpha2.PolicyReportResult, violation violation.PolicyViolation, t *testing.T) {
 	if result.Category != violation.Policy.Category {
 		t.Errorf("expected Category to be '%s', got %s", violation.Policy.Category, result.Category)
 	}

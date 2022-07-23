@@ -5,8 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -80,7 +80,7 @@ func Test_PolicyWatcher(t *testing.T) {
 		eventChan <- le
 	})
 
-	client := kubernetes.NewPolicyClient(kclient, kubernetes.NewMapper(), publisher)
+	client := kubernetes.NewClient(kclient, kubernetes.NewMapper(), publisher)
 	err := client.Run(stop)
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +138,7 @@ func Test_ClusterPolicyWatcher(t *testing.T) {
 		eventChan <- le
 	})
 
-	client := kubernetes.NewPolicyClient(kclient, kubernetes.NewMapper(), publisher)
+	client := kubernetes.NewClient(kclient, kubernetes.NewMapper(), publisher)
 	err := client.Run(stop)
 	if err != nil {
 		t.Fatal(err)

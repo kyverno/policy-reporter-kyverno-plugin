@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -16,7 +17,7 @@ import (
 )
 
 type eventClient struct {
-	publisher      kyverno.ViolationPublisher
+	publisher      *violation.Publisher
 	factory        informers.SharedInformerFactory
 	policyStore    *kyverno.PolicyStore
 	startUp        time.Time
@@ -68,7 +69,7 @@ func (e *eventClient) Run(stopper chan struct{}) error {
 	return nil
 }
 
-func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) kyverno.PolicyViolation {
+func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) violation.PolicyViolation {
 	parts := strings.Split(event.Message, " ")
 	resourceParts := strings.Split(parts[1][0:len(parts[1])-1], "/")
 
@@ -90,13 +91,13 @@ func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) kyve
 		}
 	}
 
-	return kyverno.PolicyViolation{
-		Resource: kyverno.ViolationResource{
+	return violation.PolicyViolation{
+		Resource: violation.Resource{
 			Kind:      strings.TrimSpace(parts[0]),
 			Namespace: namespace,
 			Name:      name,
 		},
-		Policy: kyverno.ViolationPolicy{
+		Policy: violation.Policy{
 			Name:     policy.Name,
 			Rule:     ruleName,
 			Message:  message,
@@ -105,14 +106,14 @@ func ConvertEvent(event *corev1.Event, policy kyverno.Policy, updated bool) kyve
 		},
 		Timestamp: event.LastTimestamp.Time,
 		Updated:   updated,
-		Event: kyverno.ViolationEvent{
+		Event: violation.Event{
 			Name: event.Name,
 			UID:  string(event.UID),
 		},
 	}
 }
 
-func NewEventClient(client k8s.Interface, publisher kyverno.ViolationPublisher, policyStore *kyverno.PolicyStore, eventNamespace string) kyverno.EventClient {
+func NewClient(client k8s.Interface, publisher *violation.Publisher, policyStore *kyverno.PolicyStore, eventNamespace string) violation.EventClient {
 	factory := informers.NewFilteredSharedInformerFactory(client, 0, eventNamespace, func(lo *v1.ListOptions) {
 		lo.FieldSelector = fields.Set{
 			"source": "kyverno-admission",

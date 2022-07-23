@@ -1,21 +1,21 @@
-package kyverno_test
+package violation_test
 
 import (
 	"testing"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 )
 
 func Test_PublishPolicyViolation(t *testing.T) {
-	vChan := make(chan kyverno.PolicyViolation)
+	vChan := make(chan violation.PolicyViolation)
 
-	publisher := kyverno.NewViolationPublisher()
-	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+	publisher := violation.NewPublisher()
+	publisher.RegisterListener(func(pv violation.PolicyViolation) {
 		vChan <- pv
 	})
 
 	go func() {
-		publisher.Publish(kyverno.PolicyViolation{Event: kyverno.ViolationEvent{Name: "test"}})
+		publisher.Publish(violation.PolicyViolation{Event: violation.Event{Name: "test"}})
 	}()
 
 	violation := <-vChan

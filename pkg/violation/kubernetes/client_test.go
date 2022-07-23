@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -61,27 +62,27 @@ func NewEventFakeCilent() (k8s.Interface, eventsv1.EventInterface) {
 }
 
 type eventStore struct {
-	store []kyverno.PolicyViolation
+	store []violation.PolicyViolation
 	rwm   *sync.RWMutex
 }
 
-func (s *eventStore) Add(r kyverno.PolicyViolation) {
+func (s *eventStore) Add(r violation.PolicyViolation) {
 	s.rwm.Lock()
 	s.store = append(s.store, r)
 	s.rwm.Unlock()
 }
 
-func (s *eventStore) Get(index int) kyverno.PolicyViolation {
+func (s *eventStore) Get(index int) violation.PolicyViolation {
 	return s.store[index]
 }
 
-func (s *eventStore) List() []kyverno.PolicyViolation {
+func (s *eventStore) List() []violation.PolicyViolation {
 	return s.store
 }
 
 func newEventStore(size int) *eventStore {
 	return &eventStore{
-		store: make([]kyverno.PolicyViolation, 0, size),
+		store: make([]violation.PolicyViolation, 0, size),
 		rwm:   &sync.RWMutex{},
 	}
 }
@@ -95,14 +96,14 @@ func Test_EventWatcher(t *testing.T) {
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	eventChan := make(chan kyverno.PolicyViolation)
+	eventChan := make(chan violation.PolicyViolation)
 
-	publisher := kyverno.NewViolationPublisher()
-	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+	publisher := violation.NewPublisher()
+	publisher.RegisterListener(func(pv violation.PolicyViolation) {
 		eventChan <- pv
 	})
 
-	client := kubernetes.NewEventClient(kclient, publisher, policyStore, "default")
+	client := kubernetes.NewClient(kclient, publisher, policyStore, "default")
 	err := client.Run(stop)
 	if err != nil {
 		t.Fatal(err)
@@ -192,14 +193,14 @@ func Test_NotBlockedEvent(t *testing.T) {
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	eventChan := make(chan kyverno.PolicyViolation)
+	eventChan := make(chan violation.PolicyViolation)
 
-	publisher := kyverno.NewViolationPublisher()
-	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+	publisher := violation.NewPublisher()
+	publisher.RegisterListener(func(pv violation.PolicyViolation) {
 		eventChan <- pv
 	})
 
-	client := kubernetes.NewEventClient(kclient, publisher, policyStore, "default")
+	client := kubernetes.NewClient(kclient, publisher, policyStore, "default")
 	err := client.Run(stop)
 	if err != nil {
 		t.Fatal(err)
@@ -230,14 +231,14 @@ func Test_UnknownPolicy(t *testing.T) {
 	policyStore := kyverno.NewPolicyStore()
 	policyStore.Add(basePolicy)
 
-	eventChan := make(chan kyverno.PolicyViolation)
+	eventChan := make(chan violation.PolicyViolation)
 
-	publisher := kyverno.NewViolationPublisher()
-	publisher.RegisterListener(func(pv kyverno.PolicyViolation) {
+	publisher := violation.NewPublisher()
+	publisher.RegisterListener(func(pv violation.PolicyViolation) {
 		eventChan <- pv
 	})
 
-	client := kubernetes.NewEventClient(kclient, publisher, policyStore, "default")
+	client := kubernetes.NewClient(kclient, publisher, policyStore, "default")
 	err := client.Run(stop)
 	if err != nil {
 		t.Fatal(err)
@@ -259,7 +260,7 @@ func Test_UnknownPolicy(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 
-func checkViolationPolicy(violation kyverno.PolicyViolation, t *testing.T) {
+func checkViolationPolicy(violation violation.PolicyViolation, t *testing.T) {
 	if violation.Policy.Category != basePolicy.Category {
 		t.Errorf("expected Category to be '%s', got %s", basePolicy.Category, violation.Policy.Category)
 	}
@@ -277,7 +278,7 @@ func checkViolationPolicy(violation kyverno.PolicyViolation, t *testing.T) {
 	}
 }
 
-func checkViolationResource(violation kyverno.PolicyViolation, t *testing.T) {
+func checkViolationResource(violation violation.PolicyViolation, t *testing.T) {
 	if violation.Resource.Kind != "Pod" {
 		t.Errorf("expected Resource.Kind to be '%s', got %s", "Pod", violation.Resource.Kind)
 	}
@@ -289,7 +290,7 @@ func checkViolationResource(violation kyverno.PolicyViolation, t *testing.T) {
 	}
 }
 
-func checkViolationEvent(violation kyverno.PolicyViolation, event *corev1.Event, t *testing.T) {
+func checkViolationEvent(violation violation.PolicyViolation, event *corev1.Event, t *testing.T) {
 	if violation.Event.Name != event.Name {
 		t.Errorf("expected Event.Name to be '%s', got %s", event.Name, violation.Event.Name)
 	}

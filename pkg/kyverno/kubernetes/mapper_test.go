@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/kubernetes"
 )
 
 func Test_MapPolicy(t *testing.T) {
