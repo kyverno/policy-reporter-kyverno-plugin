@@ -81,45 +81,41 @@ func newRunCMD() *cobra.Command {
 					return err
 				}
 
-				leClient.RegisterOnStart(func(c context.Context) {
-					klog.Info("started leadership")
+				if c.LeaderElection.Enabled {
+					leClient.RegisterOnStart(func(c context.Context) {
+						klog.Info("started leadership")
 
+						stop = make(chan struct{})
+
+						if err = eventClient.Run(stop); err != nil {
+							klog.Errorf("failed to run EventClient: %s\n", err)
+						}
+					}).RegisterOnNew(func(currentID, lockID string) {
+						if currentID != lockID {
+							klog.Infof("leadership by %s", currentID)
+						}
+					}).RegisterOnStop(func() {
+						klog.Info("stopped leadership")
+						close(stop)
+					})
+
+					go leClient.Run(cmd.Context())
+				} else {
 					stop = make(chan struct{})
-
-					err = eventClient.Run(stop)
-					if err != nil {
-						log.Printf("[ERROR] failed to run EventClient: %s\n", err)
+					if err = eventClient.Run(stop); err != nil {
+						return err
 					}
-				})
-
-				leClient.RegisterOnNew(func(currentID, lockID string) {
-					if currentID != lockID {
-						klog.Infof("leadership by %s", currentID)
-					}
-				})
-
-				leClient.RegisterOnStop(func() {
-					klog.Info("stopped leadership")
-					close(stop)
-				})
-
-				go leClient.Run(cmd.Context())
+				}
 			}
 
-			stop := make(chan struct{})
-			defer close(stop)
+			policyStop := make(chan struct{})
+			defer close(policyStop)
 
-			err = policyClient.Run(stop)
-			if err != nil {
+			if err = policyClient.Run(policyStop); err != nil {
 				return err
 			}
 
-			err = server.Start()
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return server.Start()
 		},
 	}
 

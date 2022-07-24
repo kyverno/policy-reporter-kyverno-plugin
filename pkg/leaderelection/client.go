@@ -25,16 +25,22 @@ type Client struct {
 	onNewLeader      func(currentID, lockID string)
 }
 
-func (c *Client) RegisterOnStart(callback func(c context.Context)) {
+func (c *Client) RegisterOnStart(callback func(c context.Context)) *Client {
 	c.onStartedLeading = callback
+
+	return c
 }
 
-func (c *Client) RegisterOnStop(callback func()) {
+func (c *Client) RegisterOnStop(callback func()) *Client {
 	c.onStoppedLeading = callback
+
+	return c
 }
 
-func (c *Client) RegisterOnNew(callback func(currentID string, lockID string)) {
+func (c *Client) RegisterOnNew(callback func(currentID string, lockID string)) *Client {
 	c.onNewLeader = callback
+
+	return c
 }
 
 func (c *Client) Run(ctx context.Context) {

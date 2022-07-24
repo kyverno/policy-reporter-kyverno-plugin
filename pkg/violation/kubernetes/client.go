@@ -20,17 +20,17 @@ type eventClient struct {
 	publisher      *violation.Publisher
 	factory        informers.SharedInformerFactory
 	policyStore    *kyverno.PolicyStore
-	startUp        time.Time
 	eventNamespace string
 }
 
 func (e *eventClient) Run(stopper chan struct{}) error {
+	startUp := time.Now()
 	informer := e.factory.Core().V1().Events().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if event, ok := obj.(*corev1.Event); ok {
-				if !strings.Contains(event.Message, "(blocked)") || e.startUp.After(event.CreationTimestamp.Time) {
+				if !strings.Contains(event.Message, "(blocked)") || startUp.After(event.CreationTimestamp.Time) {
 					return
 				}
 
@@ -45,7 +45,7 @@ func (e *eventClient) Run(stopper chan struct{}) error {
 		},
 		UpdateFunc: func(old interface{}, obj interface{}) {
 			if event, ok := obj.(*corev1.Event); ok {
-				if !strings.Contains(event.Message, "(blocked)") || e.startUp.After(event.LastTimestamp.Time) {
+				if !strings.Contains(event.Message, "(blocked)") || startUp.After(event.LastTimestamp.Time) {
 					return
 				}
 
@@ -126,6 +126,5 @@ func NewClient(client k8s.Interface, publisher *violation.Publisher, policyStore
 		publisher:   publisher,
 		factory:     factory,
 		policyStore: policyStore,
-		startUp:     time.Now(),
 	}
 }

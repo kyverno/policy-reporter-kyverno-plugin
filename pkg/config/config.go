@@ -30,6 +30,7 @@ type LeaderElection struct {
 	RenewDeadline   int    `mapstructure:"renewDeadline"`
 	RetryPeriod     int    `mapstructure:"retryPeriod"`
 	ReleaseOnCancel bool   `mapstructure:"releaseOnCancel"`
+	Enabled         bool   `mapstructure:"enabled"`
 }
 
 // BlockReports configuration
