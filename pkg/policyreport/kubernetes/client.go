@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kyverno/kyverno/api/policyreport/v1alpha2"
 	pr "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
@@ -144,6 +145,7 @@ func buildResult(violation violation.PolicyViolation, source string) v1alpha2.Po
 		Properties: map[string]string{
 			"eventName": violation.Event.Name,
 			"resultID":  policyreport.GeneratePolicyReportResultID(violation.Event.UID, violation.Timestamp),
+			"time":      violation.Timestamp.Format(time.RFC3339),
 		},
 	}
 }
