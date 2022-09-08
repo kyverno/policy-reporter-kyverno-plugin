@@ -1,8 +1,13 @@
 # Changelog
 
-## 1.4.1
+## 1.4.2
 
 * Block Reports: check for duplicated event IDs
+* Go depdency updates
+
+## 1.4.1
+
+* Block Reports: add time to result properties
 
 ## 1.4.0 
 
