@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1
+
+* Block Reports: check for duplicated event IDs
+
 ## 1.4.0 
 
 * Implement LeaderElection for PolicyReport Management
