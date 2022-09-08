@@ -69,8 +69,15 @@ func (p *policyReportClient) handleNamespaced(ctx context.Context, violation vio
 		}
 	}
 
+	result := buildResult(violation, p.source)
+	for _, item := range polr.Results {
+		if item.Properties["resultID"] == result.Properties["resultID"] {
+			return nil
+		}
+	}
+
 	polr.Summary.Fail++
-	polr.Results = append(polr.Results, buildResult(violation, p.source))
+	polr.Results = append(polr.Results, result)
 
 	_, err = p.client.PolicyReports(ns).Update(ctx, polr, v1.UpdateOptions{})
 	if err != nil {
@@ -114,8 +121,15 @@ func (p *policyReportClient) handleClusterScoped(ctx context.Context, violation 
 		}
 	}
 
+	result := buildResult(violation, p.source)
+	for _, item := range polr.Results {
+		if item.Properties["resultID"] == result.Properties["resultID"] {
+			return nil
+		}
+	}
+
 	polr.Summary.Fail++
-	polr.Results = append(polr.Results, buildResult(violation, p.source))
+	polr.Results = append(polr.Results, result)
 
 	_, err = p.client.ClusterPolicyReports().Update(ctx, polr, v1.UpdateOptions{})
 	if err != nil {
