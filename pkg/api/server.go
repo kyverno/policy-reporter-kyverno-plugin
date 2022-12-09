@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -22,10 +24,11 @@ type Server interface {
 }
 
 type httpServer struct {
-	mux    *http.ServeMux
-	store  *kyverno.PolicyStore
-	http   http.Server
-	synced func() bool
+	mux     *http.ServeMux
+	store   *kyverno.PolicyStore
+	reports reporting.PolicyReportGenerator
+	http    http.Server
+	synced  func() bool
 }
 
 func (s *httpServer) registerHandler() {
@@ -40,6 +43,8 @@ func (s *httpServer) RegisterMetrics() {
 func (s *httpServer) RegisterREST() {
 	s.mux.HandleFunc("/policies", Gzip(PolicyHandler(s.store)))
 	s.mux.HandleFunc("/verify-image-rules", Gzip(VerifyImageRulesHandler(s.store)))
+	s.mux.HandleFunc("/namespace-details-reporting", Gzip(NamespaceReportingHandler(s.reports, path.Join("templates", "reporting"))))
+	s.mux.HandleFunc("/policy-details-reporting", Gzip(PolicyReportingHandler(s.reports, path.Join("templates", "reporting"))))
 }
 
 func (s *httpServer) Start() error {
@@ -51,13 +56,14 @@ func (s *httpServer) Shutdown(ctx context.Context) error {
 }
 
 // NewServer constructor for a new API Server
-func NewServer(pStore *kyverno.PolicyStore, port int, synced func() bool) Server {
+func NewServer(pStore *kyverno.PolicyStore, reports reporting.PolicyReportGenerator, port int, synced func() bool) Server {
 	mux := http.NewServeMux()
 
 	s := &httpServer{
-		store:  pStore,
-		mux:    mux,
-		synced: synced,
+		store:   pStore,
+		reports: reports,
+		mux:     mux,
+		synced:  synced,
 		http: http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: mux,

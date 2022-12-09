@@ -1,4 +1,4 @@
-FROM golang:1.18 as builder
+FROM golang:1.19 as builder
 
 ARG LD_FLAGS="-s -w"
 ARG TARGETPLATFORM
@@ -24,6 +24,7 @@ WORKDIR /app
 USER 1234
 
 COPY --from=builder /app/LICENSE.md .
+COPY --from=builder /app/templates /app/templates
 COPY --from=builder /app/build/kyverno-plugin /app/kyverno-plugin
 
 EXPOSE 2112

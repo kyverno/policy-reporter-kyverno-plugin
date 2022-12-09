@@ -3,11 +3,70 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"path"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
 )
+
+var funcMap = template.FuncMap{
+	"add": func(i, j int) int {
+		return i + j
+	},
+}
+
+// PolicyHandler for the PolicyReport REST API
+func PolicyReportingHandler(s reporting.PolicyReportGenerator, basePath string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		data, err := s.PerPolicyData(req.Context(), reporting.Filter{
+			Namespaces:   req.URL.Query()["namespaces"],
+			Policies:     req.URL.Query()["policies"],
+			ClusterScope: req.URL.Query().Get("clusterScope") != "0",
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl, err := template.New("policy-report-details.html").Funcs(funcMap).ParseFiles(path.Join(basePath, "policy-report-details.html"), path.Join(basePath, "mui.css"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err = tmpl.Execute(w, data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+// NamespaceReportingHandler for the NamespaceReport REST API
+func NamespaceReportingHandler(s reporting.PolicyReportGenerator, basePath string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		data, err := s.PerNamespaceData(req.Context(), reporting.Filter{
+			Namespaces:   req.URL.Query()["namespaces"],
+			Policies:     req.URL.Query()["policies"],
+			ClusterScope: req.URL.Query().Get("clusterScope") != "0",
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl, err := template.New("namespace-report-details.html").Funcs(funcMap).ParseFiles(path.Join(basePath, "namespace-report-details.html"), path.Join(basePath, "mui.css"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err = tmpl.Execute(w, data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
 
 // PolicyHandler for the Policy REST API
 func PolicyHandler(s *kyverno.PolicyStore) http.HandlerFunc {
