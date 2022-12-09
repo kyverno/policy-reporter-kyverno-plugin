@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	v1 "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/kyverno/v1"
 	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
@@ -11,6 +12,8 @@ import (
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/leaderelection"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
 	prk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
+	rk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	vk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
 	"k8s.io/client-go/dynamic"
@@ -37,6 +40,7 @@ type Resolver struct {
 func (r *Resolver) APIServer(synced func() bool) api.Server {
 	return api.NewServer(
 		r.PolicyStore(),
+		r.Reporting(),
 		r.config.API.Port,
 		synced,
 	)
@@ -107,6 +111,14 @@ func (r *Resolver) Clientset() (*kubernetes.Clientset, error) {
 	r.clientset = clientset
 
 	return r.clientset, nil
+}
+
+// Reporting resolver method
+func (r *Resolver) Reporting() reporting.PolicyReportGenerator {
+	return reporting.NewPolicyReportGenerator(
+		rk8s.NewPolicyClient(v1.NewForConfigOrDie(r.k8sConfig)),
+		rk8s.NewReportClient(v1alpha2.NewForConfigOrDie(r.k8sConfig)),
+	)
 }
 
 // LeaderElectionClient resolver method

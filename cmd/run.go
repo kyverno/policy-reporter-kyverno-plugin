@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
@@ -114,6 +115,8 @@ func newRunCMD() *cobra.Command {
 			if err = policyClient.Run(policyStop); err != nil {
 				return err
 			}
+
+			fmt.Println("[INFO] Server starting")
 
 			return server.Start()
 		},

@@ -1,15 +1,84 @@
 package api_test
 
 import (
+	"context"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
 )
+
+type policyReportGeneratorStub struct {
+	error error
+}
+
+func (g *policyReportGeneratorStub) PerPolicyData(ctx context.Context, filter reporting.Filter) ([]*reporting.Validation, error) {
+	return []*reporting.Validation{
+		{
+			Name: "disallow-capabilities",
+			Policy: &reporting.Policy{
+				Title:       "Disallow Capabilities",
+				Category:    "Pod Security Standards (Baseline)",
+				Severity:    "medium",
+				Description: "Adding capabilities beyond those listed in the policy must be disallowed.",
+			},
+			Groups: map[string]*reporting.Group{
+				"kyverno": {
+					Name: "kyverno",
+					Rules: map[string]*reporting.Rule{
+						"adding-capabilities": {
+							Summary: &reporting.Summary{Pass: 1},
+							Resources: []*reporting.Resource{{
+								Name:       "kyverno",
+								Kind:       "Deployment",
+								APIVersion: "apps/v1",
+								Status:     "pass",
+							}},
+						},
+					},
+				},
+			},
+		},
+	}, g.error
+}
+
+func (g *policyReportGeneratorStub) PerNamespaceData(ctx context.Context, filter reporting.Filter) ([]*reporting.Validation, error) {
+	return []*reporting.Validation{
+		{
+			Name: "kyverno",
+			Groups: map[string]*reporting.Group{
+				"disallow-capabilities": {
+					Name: "disallow-capabilities",
+					Policy: &reporting.Policy{
+						Title:       "Disallow Capabilities",
+						Category:    "Pod Security Standards (Baseline)",
+						Severity:    "medium",
+						Description: "Adding capabilities beyond those listed in the policy must be disallowed.",
+					},
+					Rules: map[string]*reporting.Rule{
+						"adding-capabilities": {
+							Summary: &reporting.Summary{Pass: 1},
+							Resources: []*reporting.Resource{{
+								Name:       "kyverno",
+								Kind:       "Deployment",
+								APIVersion: "apps/v1",
+								Status:     "pass",
+							}},
+						},
+					},
+				},
+			},
+		},
+	}, g.error
+}
 
 func Test_PolicyAPI(t *testing.T) {
 	t.Run("Empty Respose", func(t *testing.T) {
@@ -236,4 +305,70 @@ func Test_VerifyImageRulesAPI(t *testing.T) {
 			t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
 		}
 	})
+}
+
+func Test_PolicyReportingHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/policy-details-reporting", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(api.PolicyReportingHandler(&policyReportGeneratorStub{}, path.Join("..", "..", "templates", "reporting")))
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		b, _ := io.ReadAll(rr.Body)
+		t.Errorf("handler returned wrong status code: got %v want %v (%s)", status, http.StatusOK, string(b))
+	}
+}
+
+func Test_PolicyReportingHandlerDataError(t *testing.T) {
+	req, err := http.NewRequest("GET", "/policy-details-reporting", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(api.PolicyReportingHandler(&policyReportGeneratorStub{errors.New("error")}, path.Join("..", "..", "templates", "reporting")))
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusInternalServerError)
+	}
+}
+
+func Test_NamespaceReportingHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/namespace-details-reporting", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(api.NamespaceReportingHandler(&policyReportGeneratorStub{}, path.Join("..", "..", "templates", "reporting")))
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		b, _ := io.ReadAll(rr.Body)
+		t.Errorf("handler returned wrong status code: got %v want %v (%s)", status, http.StatusOK, string(b))
+	}
+}
+
+func Test_NamespaceReportingHandlerDataError(t *testing.T) {
+	req, err := http.NewRequest("GET", "/namespace-details-reporting", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(api.NamespaceReportingHandler(&policyReportGeneratorStub{errors.New("error")}, path.Join("..", "..", "templates", "reporting")))
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusInternalServerError)
+	}
 }
