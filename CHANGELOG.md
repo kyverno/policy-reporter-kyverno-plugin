@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0
+
+* Implement Kyverno Compliance Reports
+* Update to Go 1.19
+
 ## 1.4.2
 
 * Block Reports: check for duplicated event IDs
