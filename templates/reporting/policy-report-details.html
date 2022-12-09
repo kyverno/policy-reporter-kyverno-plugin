@@ -118,7 +118,7 @@
             {{ $error = add $error $rule.Summary.Error }}
 
             <tr>
-              <td>{{ $ns }}</td>
+              <td>{{ or $ns "Cluster Scoped" }}</td>
               <td>{{ $ruleName }}</td>
               <td class="mui--text-right"><div class="chip pass">{{ $rule.Summary.Pass }}</div></td>
               <td class="mui--text-right"><div class="chip warning">{{ $rule.Summary.Warning }}</div></td>
@@ -143,7 +143,7 @@
 
         {{ range $ns, $val := $validation.Groups }}
 
-        <h5 class="mui--text-title" style="font-weight: bold; margin: 2rem 0;">Namespace: {{ $ns }}</h5>
+        <h5 class="mui--text-title" style="font-weight: bold; margin: 2rem 0;">Namespace: {{ or $ns "Cluster Scoped" }}</h5>
 
         <div style="border: 1px solid #ccc; border-radius: 4px; padding: 8px; margin-bottom: 1.5rem;">
           <div class="mui-container-fluid" style="padding-left: 0; margin-bottom: 8px;">
