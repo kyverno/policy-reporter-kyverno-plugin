@@ -125,6 +125,10 @@ func (g *policyReportGenerator) PerPolicyData(ctx context.Context, filter Filter
 
 	data := make([]*Validation, 0, len(mapping))
 	for _, v := range mapping {
+		if len(v.Groups) == 0 {
+			continue
+		}
+
 		data = append(data, v)
 	}
 
@@ -244,6 +248,10 @@ func (g *policyReportGenerator) PerNamespaceData(ctx context.Context, filter Fil
 
 	data := make([]*Validation, 0, len(mapping))
 	for _, v := range mapping {
+		if len(v.Groups) == 0 {
+			continue
+		}
+
 		data = append(data, v)
 	}
 
