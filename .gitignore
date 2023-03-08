@@ -3,3 +3,4 @@
 build
 /test.yaml
 coverage.out
+.vscode

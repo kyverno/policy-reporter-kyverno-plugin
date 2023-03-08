@@ -6,14 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	eventsv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
 )
 
 var (

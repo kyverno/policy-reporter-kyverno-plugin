@@ -3,10 +3,11 @@ package kubernetes
 import (
 	"context"
 
-	v1alpha2 "github.com/kyverno/kyverno/api/policyreport/v1alpha2"
-	pr "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+
+	v1alpha2 "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/policyreport/v1alpha2"
+	pr "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/typed/policyreport/v1alpha2"
 )
 
 var ReportLabel = map[string]string{

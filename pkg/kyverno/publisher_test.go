@@ -15,7 +15,7 @@ func Test_PublishLifecycleEvents(t *testing.T) {
 	})
 
 	go func() {
-		publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: kyverno.Policy{}, OldPolicy: kyverno.Policy{}})
+		publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Updated, Policy: kyverno.Policy{}})
 	}()
 
 	event := <-eChan

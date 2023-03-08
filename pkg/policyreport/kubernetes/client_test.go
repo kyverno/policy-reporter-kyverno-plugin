@@ -5,13 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kyverno/kyverno/api/policyreport/v1alpha2"
-	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/fake"
-	v1alpha2client "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/policyreport/v1alpha2"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/fake"
+	v1alpha2client "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/typed/policyreport/v1alpha2"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func NewPolicyReportFakeCilent() (v1alpha2client.Wgpolicyk8sV1alpha2Interface, v1alpha2client.PolicyReportInterface, v1alpha2client.ClusterPolicyReportInterface) {

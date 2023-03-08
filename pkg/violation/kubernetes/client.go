@@ -3,17 +3,20 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
+	"github.com/segmentio/fasthash/fnv1a"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 )
 
 type eventClient struct {
@@ -34,7 +37,7 @@ func (e *eventClient) Run(stopper chan struct{}) error {
 					return
 				}
 
-				policy, ok := e.policyStore.Get(string(event.InvolvedObject.UID))
+				policy, ok := e.policyStore.Get(generateID(event.InvolvedObject))
 				if !ok {
 					log.Printf("[ERROR] policy not found %s\n", event.InvolvedObject.Name)
 					return
@@ -49,7 +52,7 @@ func (e *eventClient) Run(stopper chan struct{}) error {
 					return
 				}
 
-				policy, ok := e.policyStore.Get(string(event.InvolvedObject.UID))
+				policy, ok := e.policyStore.Get(generateID(event.InvolvedObject))
 				if !ok {
 					log.Printf("[ERROR] policy not found %s\n", event.InvolvedObject.Name)
 					return
@@ -127,4 +130,12 @@ func NewClient(client k8s.Interface, publisher *violation.Publisher, policyStore
 		factory:     factory,
 		policyStore: policyStore,
 	}
+}
+
+func generateID(object corev1.ObjectReference) string {
+	h1 := fnv1a.Init64
+	h1 = fnv1a.AddString64(h1, object.Name)
+	h1 = fnv1a.AddString64(h1, object.Namespace)
+
+	return strconv.FormatUint(h1, 10)
 }

@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 
-	kyverno "github.com/kyverno/kyverno/api/kyverno/v1"
-	pr "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/kyverno/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kyverno "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/kyverno/v1"
+	pr "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/typed/kyverno/v1"
 )
 
 type PolicyClient struct {

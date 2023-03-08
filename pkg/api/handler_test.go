@@ -114,6 +114,7 @@ func Test_PolicyAPI(t *testing.T) {
 
 		policy := kyverno.Policy{
 			Kind:              "Policy",
+			APIVersion:        "kyverno/v1",
 			Name:              "require-ressources",
 			Namespace:         "test",
 			Rules:             []*kyverno.Rule{result},
@@ -132,7 +133,7 @@ func Test_PolicyAPI(t *testing.T) {
 			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 
-		expected := `[{"kind":"Policy","name":"require-ressources","namespace":"test","background":false,"rules":[{"message":"validation error: requests and limits required. Rule autogen-check-for-requests-and-limits failed at path /spec/template/spec/containers/0/resources/requests/","name":"autogen-check-for-requests-and-limits","type":""}]`
+		expected := `[{"kind":"Policy","apiVersion":"kyverno/v1","name":"require-ressources","namespace":"test","background":null,"rules":[{"message":"validation error: requests and limits required. Rule autogen-check-for-requests-and-limits failed at path /spec/template/spec/containers/0/resources/requests/","name":"autogen-check-for-requests-and-limits","type":""}]`
 		if !strings.Contains(rr.Body.String(), expected) {
 			t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
 		}

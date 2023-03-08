@@ -6,7 +6,7 @@ type PolicyListener = func(LifecycleEvent)
 // PolicyClient to watch for LifecycleEvents in the cluster
 type PolicyClient interface {
 	// Run watches for Policy Events
-	Run(chan struct{}) error
+	Run(int, chan struct{}) error
 	// HasSynced all CRDs
 	HasSynced() bool
 }

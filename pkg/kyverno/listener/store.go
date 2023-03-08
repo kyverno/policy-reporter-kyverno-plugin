@@ -8,10 +8,10 @@ import (
 func NewStoreListener(store *kyverno.PolicyStore) kyverno.PolicyListener {
 	return func(event kyverno.LifecycleEvent) {
 		if event.Type == kyverno.Deleted {
-			store.Remove(event.NewPolicy.UID)
+			store.Remove(event.Policy.GetID())
 			return
 		}
 
-		store.Add(event.NewPolicy)
+		store.Add(event.Policy)
 	}
 }
