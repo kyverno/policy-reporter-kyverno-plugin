@@ -4,45 +4,33 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/metadata"
+	"k8s.io/client-go/metadata/metadatainformer"
 	"k8s.io/client-go/tools/cache"
-)
 
-var (
-	policySchema = schema.GroupVersionResource{
-		Group:    "kyverno.io",
-		Version:  "v1",
-		Resource: "policies",
-	}
-
-	clusterPolicySchema = schema.GroupVersionResource{
-		Group:    "kyverno.io",
-		Version:  "v1",
-		Resource: "clusterpolicies",
-	}
+	apiV1 "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/kyverno/v1"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 )
 
 type policyClient struct {
-	publisher *kyverno.EventPublisher
-	fatcory   dynamicinformer.DynamicSharedInformerFactory
-	mapper    Mapper
-	synced    bool
+	queue   *Queue
+	factory metadatainformer.SharedInformerFactory
+	pol     informers.GenericInformer
+	cpol    informers.GenericInformer
+	synced  bool
 }
 
 func (c *policyClient) HasSynced() bool {
 	return c.synced
 }
 
-func (c *policyClient) Run(stopper chan struct{}) error {
-	policyInformer := c.configurePolicy()
-	clusterPolicyInformaer := c.configureClusterPolicy()
+func (c *policyClient) Sync(stopper chan struct{}) error {
+	policyInformer := c.configureInformer(c.pol.Informer())
+	clusterPolicyInformaer := c.configureInformer(c.cpol.Informer())
 
-	c.fatcory.Start(stopper)
+	c.factory.Start(stopper)
 
 	if !cache.WaitForCacheSync(stopper, policyInformer.HasSynced) {
 		return fmt.Errorf("failed to sync policies")
@@ -57,81 +45,52 @@ func (c *policyClient) Run(stopper chan struct{}) error {
 	return nil
 }
 
-func (c *policyClient) configurePolicy() cache.SharedIndexInformer {
-	polrInformer := c.fatcory.ForResource(policySchema).Informer()
-	polrInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			if item, ok := obj.(*unstructured.Unstructured); ok {
-				c.publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: c.mapper.MapPolicy(item.Object), OldPolicy: kyverno.Policy{}})
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			if item, ok := obj.(*unstructured.Unstructured); ok {
-				c.publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: c.mapper.MapPolicy(item.Object), OldPolicy: kyverno.Policy{}})
-			}
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			if item, ok := newObj.(*unstructured.Unstructured); ok {
-				newPolicy := c.mapper.MapPolicy(item.Object)
+func (c *policyClient) Run(worker int, stopper chan struct{}) error {
+	if err := c.Sync(stopper); err != nil {
+		return err
+	}
 
-				var oldPolicy kyverno.Policy
-				if oldItem, ok := oldObj.(*unstructured.Unstructured); ok {
-					oldPolicy = c.mapper.MapPolicy(oldItem.Object)
-				}
+	c.queue.Run(worker, stopper)
 
-				c.publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: newPolicy, OldPolicy: oldPolicy})
-			}
-		},
-	})
-
-	polrInformer.SetWatchErrorHandler(func(_ *cache.Reflector, _ error) {
-		c.synced = false
-	})
-
-	return polrInformer
+	return nil
 }
 
-func (c *policyClient) configureClusterPolicy() cache.SharedIndexInformer {
-	polrInformer := c.fatcory.ForResource(clusterPolicySchema).Informer()
-	polrInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+func (c *policyClient) configureInformer(informer cache.SharedIndexInformer) cache.SharedIndexInformer {
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			if item, ok := obj.(*unstructured.Unstructured); ok {
-				c.publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Added, NewPolicy: c.mapper.MapPolicy(item.Object), OldPolicy: kyverno.Policy{}})
+			if item, ok := obj.(*v1.PartialObjectMetadata); ok {
+				c.queue.Add(item)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			if item, ok := obj.(*unstructured.Unstructured); ok {
-				c.publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Deleted, NewPolicy: c.mapper.MapPolicy(item.Object), OldPolicy: kyverno.Policy{}})
+			if item, ok := obj.(*v1.PartialObjectMetadata); ok {
+				c.queue.Add(item)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			if item, ok := newObj.(*unstructured.Unstructured); ok {
-				newPolicy := c.mapper.MapPolicy(item.Object)
-
-				var oldPolicy kyverno.Policy
-				if oldItem, ok := oldObj.(*unstructured.Unstructured); ok {
-					oldPolicy = c.mapper.MapPolicy(oldItem.Object)
-				}
-
-				c.publisher.Publish(kyverno.LifecycleEvent{Type: kyverno.Updated, NewPolicy: newPolicy, OldPolicy: oldPolicy})
+		UpdateFunc: func(_, newObj interface{}) {
+			if item, ok := newObj.(*v1.PartialObjectMetadata); ok {
+				c.queue.Add(item)
 			}
 		},
 	})
 
-	polrInformer.SetWatchErrorHandler(func(_ *cache.Reflector, _ error) {
+	informer.SetWatchErrorHandler(func(_ *cache.Reflector, _ error) {
 		c.synced = false
 	})
 
-	return polrInformer
+	return informer
 }
 
 // NewClient creates a new PolicyClient based on the kubernetes go-client
-func NewClient(client dynamic.Interface, mapper Mapper, publisher *kyverno.EventPublisher) kyverno.PolicyClient {
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(client, time.Hour, corev1.NamespaceAll, nil)
+func NewClient(client metadata.Interface, queue *Queue) kyverno.PolicyClient {
+	factory := metadatainformer.NewSharedInformerFactory(client, 15*time.Minute)
+	pol := factory.ForResource(apiV1.SchemeGroupVersion.WithResource("policies"))
+	cpol := factory.ForResource(apiV1.SchemeGroupVersion.WithResource("clusterpolicies"))
 
 	return &policyClient{
-		fatcory:   factory,
-		mapper:    mapper,
-		publisher: publisher,
+		factory: factory,
+		pol:     pol,
+		cpol:    cpol,
+		queue:   queue,
 	}
 }

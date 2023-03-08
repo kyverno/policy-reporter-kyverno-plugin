@@ -35,7 +35,7 @@ func (s *PolicyStore) List() []Policy {
 // Add a Policy to the store
 func (s *PolicyStore) Add(r Policy) {
 	s.rwm.Lock()
-	s.store[r.UID] = r
+	s.store[r.GetID()] = r
 	s.rwm.Unlock()
 }
 

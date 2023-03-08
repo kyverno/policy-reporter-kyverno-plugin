@@ -3,8 +3,9 @@ package config_test
 import (
 	"testing"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 	"k8s.io/client-go/rest"
+
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 )
 
 var testConfig = &config.Config{}
@@ -119,6 +120,7 @@ func Test_ResolvePolicyStore(t *testing.T) {
 		t.Error("A second call resolver.PolicyStore() should return the cached first store")
 	}
 }
+
 func Test_ResolvePolicyMapper(t *testing.T) {
 	resolver := config.NewResolver(&config.Config{}, &rest.Config{})
 
@@ -173,6 +175,7 @@ func Test_ResolveClientWithInvalidK8sConfig(t *testing.T) {
 		t.Error("Error: 'host must be a URL or a host:port pair' was expected")
 	}
 }
+
 func Test_ResolveEventClientWithInvalidK8sConfig(t *testing.T) {
 	k8sConfig := &rest.Config{}
 	k8sConfig.Host = "invalid/url"

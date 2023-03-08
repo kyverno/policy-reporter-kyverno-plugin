@@ -3,9 +3,15 @@ package config
 import (
 	"time"
 
-	v1 "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/kyverno/v1"
-	"github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
+
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
+	v1 "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/typed/kyverno/v1"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/typed/policyreport/v1alpha2"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	k8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno/listener"
@@ -16,9 +22,6 @@ import (
 	rk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	vk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // Resolver manages dependencies
@@ -44,6 +47,15 @@ func (r *Resolver) APIServer(synced func() bool) api.Server {
 		r.config.API.Port,
 		synced,
 	)
+}
+
+func (r *Resolver) CRDMetadataClient() (metadata.Interface, error) {
+	client, err := metadata.NewForConfig(r.k8sConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
 // PolicyStore resolver method
@@ -85,16 +97,45 @@ func (r *Resolver) PolicyClient() (kyverno.PolicyClient, error) {
 		return r.policyClient, nil
 	}
 
-	client, err := dynamic.NewForConfig(r.k8sConfig)
+	client, err := r.CRDMetadataClient()
 	if err != nil {
 		return nil, err
 	}
 
-	policyClient := k8s.NewClient(client, r.Mapper(), r.EventPublisher())
+	queue, err := r.Queue()
+	if err != nil {
+		return nil, err
+	}
+
+	policyClient := k8s.NewClient(client, queue)
 
 	r.policyClient = policyClient
 
 	return policyClient, nil
+}
+
+// EventPublisher resolver method
+func (r *Resolver) Queue() (*k8s.Queue, error) {
+	client, err := r.CRDClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return k8s.NewQueue(
+		r.EventPublisher(),
+		workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "policy-queue"),
+		client,
+		dynamic.NewForConfigOrDie(r.k8sConfig),
+	), nil
+}
+
+func (r *Resolver) CRDClient() (v1.KyvernoV1Interface, error) {
+	client, err := v1.NewForConfig(r.k8sConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
 // EventClient resolver method

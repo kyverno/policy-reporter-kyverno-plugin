@@ -4,20 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kyverno/kyverno/api/policyreport/v1alpha2"
-	pr "github.com/kyverno/kyverno/pkg/client/clientset/versioned/typed/policyreport/v1alpha2"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/policyreport/v1alpha2"
+	pr "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/client/clientset/versioned/typed/policyreport/v1alpha2"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 )
 
-var (
-	reportLabels = map[string]string{
-		"managed-by": "policy-reporter-kyverno-plugin",
-	}
-)
+var reportLabels = map[string]string{
+	"managed-by": "policy-reporter-kyverno-plugin",
+}
 
 type policyReportClient struct {
 	client         pr.Wgpolicyk8sV1alpha2Interface

@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server for the optional HTTP REST API

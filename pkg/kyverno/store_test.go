@@ -26,13 +26,13 @@ func Test_PolicyStore(t *testing.T) {
 	pol := NewPolicy()
 
 	t.Run("Add/Get", func(t *testing.T) {
-		_, ok := store.Get(pol.UID)
+		_, ok := store.Get(pol.GetID())
 		if ok == true {
 			t.Fatalf("Should not be found in empty Store")
 		}
 
 		store.Add(pol)
-		_, ok = store.Get(pol.UID)
+		_, ok = store.Get(pol.GetID())
 		if ok == false {
 			t.Errorf("Should be found in Store after adding report to the store")
 		}
@@ -46,13 +46,13 @@ func Test_PolicyStore(t *testing.T) {
 	})
 
 	t.Run("Delete/Get", func(t *testing.T) {
-		_, ok := store.Get(pol.UID)
+		_, ok := store.Get(pol.GetID())
 		if ok == false {
 			t.Errorf("Should be found in Store after adding report to the store")
 		}
 
-		store.Remove(pol.UID)
-		_, ok = store.Get(pol.UID)
+		store.Remove(pol.GetID())
+		_, ok = store.Get(pol.GetID())
 		if ok == true {
 			t.Fatalf("Should not be found after Remove report from Store")
 		}

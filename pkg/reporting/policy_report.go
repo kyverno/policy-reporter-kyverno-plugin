@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	v1 "github.com/kyverno/kyverno/api/kyverno/v1"
-	kyverno "github.com/kyverno/kyverno/api/kyverno/v1alpha2"
-	"github.com/kyverno/kyverno/api/policyreport/v1alpha2"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting/kubernetes"
 	"golang.org/x/exp/slices"
+
+	v1 "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/kyverno/v1"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/policyreport/v1alpha2"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting/kubernetes"
 )
 
 const (
@@ -262,8 +262,8 @@ func (g *policyReportGenerator) PerNamespaceData(ctx context.Context, filter Fil
 	return data, nil
 }
 
-func (g *policyReportGenerator) reports(ctx context.Context) ([]kyverno.ReportInterface, error) {
-	reports := []kyverno.ReportInterface{}
+func (g *policyReportGenerator) reports(ctx context.Context) ([]v1alpha2.ReportInterface, error) {
+	reports := []v1alpha2.ReportInterface{}
 
 	nsReports, err := g.reportClient.PolicyReports(ctx)
 	if err != nil {
@@ -294,7 +294,6 @@ func NewPolicyReportGenerator(policyClient *kubernetes.PolicyClient, reportClien
 }
 
 func increaseSummary(result v1alpha2.PolicyResult, sum *Summary) {
-
 	switch result {
 	case v1alpha2.StatusPass:
 		sum.Pass++

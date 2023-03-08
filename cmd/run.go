@@ -3,15 +3,16 @@ package cmd
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
-	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 )
 
 func newRunCMD() *cobra.Command {
@@ -109,16 +110,20 @@ func newRunCMD() *cobra.Command {
 				}
 			}
 
-			policyStop := make(chan struct{})
-			defer close(policyStop)
+			g := &errgroup.Group{}
 
-			if err = policyClient.Run(policyStop); err != nil {
-				return err
-			}
+			g.Go(func() error {
+				stop := make(chan struct{})
+				defer close(stop)
+				log.Printf("[INFO] start client with %d workers", 5)
 
-			fmt.Println("[INFO] Server starting")
+				return policyClient.Run(5, stop)
+			})
 
-			return server.Start()
+			log.Println("[INFO] Server starting")
+			g.Go(server.Start)
+
+			return g.Wait()
 		},
 	}
 

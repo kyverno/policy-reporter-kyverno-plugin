@@ -10,6 +10,9 @@ func NewPolicy() kyverno.Policy {
 		UID:      "953b1167-1ff5-4cf6-b636-3b7d0c0dd6c7",
 		Severity: "medium",
 		Category: "Pod Security Standards (Default)",
+		Background: func(val bool) *bool {
+			return &val
+		}(false),
 		Rules: []*kyverno.Rule{
 			{
 				Name:            "host-path",
