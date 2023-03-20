@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+* Add zap.Logger
+
 ## 1.5.0
 
 * Implement Kyverno Compliance Reports

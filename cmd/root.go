@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 )
@@ -52,7 +51,7 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
-		log.Println("[INFO] No seperate configuration file found")
+		zap.L().Info("no seperate configuration file found")
 	}
 
 	if flag := cmd.Flags().Lookup("kubeconfig"); flag != nil {
@@ -76,10 +75,10 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	}
 
 	if err := v.BindEnv("leaderElection.podName", "POD_NAME"); err != nil {
-		log.Printf("[WARNING] failed to bind env POD_NAME")
+		zap.L().Warn("failed to bind env POD_NAME")
 	}
 	if err := v.BindEnv("leaderElection.namespace", "POD_NAMESPACE"); err != nil {
-		log.Printf("[WARNING] failed to bind env POD_NAMESPACE")
+		zap.L().Warn("failed to bind env POD_NAMESPACE")
 	}
 
 	c := &config.Config{}

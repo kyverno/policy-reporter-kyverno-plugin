@@ -2,7 +2,14 @@ package config
 
 // API configuration
 type API struct {
-	Port int `mapstructure:"port"`
+	Port    int  `mapstructure:"port"`
+	Logging bool `mapstructure:"logging"`
+}
+
+type Logging struct {
+	LogLevel    int8   `mapstructure:"logLevel"`
+	Encoding    string `mapstructure:"encoding"`
+	Development bool   `mapstructure:"development"`
 }
 
 // REST configuration
@@ -49,4 +56,5 @@ type Config struct {
 	Kubeconfig     string         `mapstructure:"kubeconfig"`
 	BlockReports   BlockReports   `mapstructure:"blockReports"`
 	LeaderElection LeaderElection `mapstructure:"leaderElection"`
+	Logging        Logging        `mapstructure:"logging"`
 }

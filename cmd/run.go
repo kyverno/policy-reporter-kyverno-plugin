@@ -3,13 +3,12 @@ package cmd
 import (
 	"context"
 	"flag"
-	"log"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/config"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
@@ -38,6 +37,7 @@ func newRunCMD() *cobra.Command {
 			}
 
 			resolver := config.NewResolver(c, k8sConfig)
+			logger, err := resolver.Logger()
 
 			policyClient, err := resolver.PolicyClient()
 			if err != nil {
@@ -60,7 +60,7 @@ func newRunCMD() *cobra.Command {
 			}
 
 			if c.BlockReports.Enabled {
-				log.Printf("[INFO] Block Reports enabled, max results per Report: %d\n", c.BlockReports.Results.MaxPerReport)
+				logger.Info("block reports enabled", zap.Int("resultsPerReport", c.BlockReports.Results.MaxPerReport))
 				eventClient, err := resolver.EventClient()
 				if err != nil {
 					return err
@@ -85,19 +85,19 @@ func newRunCMD() *cobra.Command {
 
 				if c.LeaderElection.Enabled {
 					leClient.RegisterOnStart(func(c context.Context) {
-						klog.Info("started leadership")
+						logger.Info("started leadership")
 
 						stop = make(chan struct{})
 
 						if err = eventClient.Run(stop); err != nil {
-							klog.Errorf("failed to run EventClient: %s\n", err)
+							logger.Error("failed to run EventClient", zap.Error(err))
 						}
 					}).RegisterOnNew(func(currentID, lockID string) {
 						if currentID != lockID {
-							klog.Infof("leadership by %s", currentID)
+							logger.Info("leadership", zap.String("leader", currentID))
 						}
 					}).RegisterOnStop(func() {
-						klog.Info("stopped leadership")
+						logger.Info("stopped leadership")
 						close(stop)
 					})
 
@@ -115,12 +115,12 @@ func newRunCMD() *cobra.Command {
 			g.Go(func() error {
 				stop := make(chan struct{})
 				defer close(stop)
-				log.Printf("[INFO] start client with %d workers", 5)
+				logger.Info("start client", zap.Int("worker", 5))
 
 				return policyClient.Run(5, stop)
 			})
 
-			log.Println("[INFO] Server starting")
+			logger.Info("server starting")
 			g.Go(server.Start)
 
 			return g.Wait()

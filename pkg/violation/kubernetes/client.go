@@ -2,12 +2,12 @@ package kubernetes
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/segmentio/fasthash/fnv1a"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -39,7 +39,7 @@ func (e *eventClient) Run(stopper chan struct{}) error {
 
 				policy, ok := e.policyStore.Get(generateID(event.InvolvedObject))
 				if !ok {
-					log.Printf("[ERROR] policy not found %s\n", event.InvolvedObject.Name)
+					zap.L().Error("policy not found", zap.String("policy", event.InvolvedObject.Name))
 					return
 				}
 
@@ -54,7 +54,7 @@ func (e *eventClient) Run(stopper chan struct{}) error {
 
 				policy, ok := e.policyStore.Get(generateID(event.InvolvedObject))
 				if !ok {
-					log.Printf("[ERROR] policy not found %s\n", event.InvolvedObject.Name)
+					zap.L().Error("policy not found", zap.String("policy", event.InvolvedObject.Name))
 					return
 				}
 

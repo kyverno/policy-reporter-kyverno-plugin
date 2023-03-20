@@ -3,6 +3,8 @@ package config
 import (
 	"time"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/metadata"
@@ -37,15 +39,22 @@ type Resolver struct {
 	polrClient   policyreport.Client
 	publisher    *kyverno.EventPublisher
 	vPulisher    *violation.Publisher
+	logger       *zap.Logger
 }
 
 // APIServer resolver method
 func (r *Resolver) APIServer(synced func() bool) api.Server {
+	var logger *zap.Logger
+	if r.config.API.Logging {
+		logger, _ = r.Logger()
+	}
+
 	return api.NewServer(
 		r.PolicyStore(),
 		r.Reporting(),
 		r.config.API.Port,
 		synced,
+		logger,
 	)
 }
 
@@ -235,6 +244,55 @@ func (r *Resolver) Mapper() k8s.Mapper {
 	r.mapper = k8s.NewMapper()
 
 	return r.mapper
+}
+
+// Logger resolver method
+func (r *Resolver) Logger() (*zap.Logger, error) {
+	if r.logger != nil {
+		return r.logger, nil
+	}
+
+	encoder := zap.NewProductionEncoderConfig()
+	if r.config.Logging.Development {
+		encoder = zap.NewDevelopmentEncoderConfig()
+		encoder.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
+	}
+
+	ouput := "json"
+	if r.config.Logging.Encoding != "json" {
+		ouput = "console"
+		encoder.EncodeCaller = nil
+	}
+
+	var sampling *zap.SamplingConfig
+	if !r.config.Logging.Development {
+		sampling = &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		}
+	}
+
+	config := zap.Config{
+		Level:             zap.NewAtomicLevelAt(zapcore.Level(r.config.Logging.LogLevel)),
+		Development:       r.config.Logging.Development,
+		Sampling:          sampling,
+		Encoding:          ouput,
+		EncoderConfig:     encoder,
+		DisableStacktrace: !r.config.Logging.Development,
+		OutputPaths:       []string{"stderr"},
+		ErrorOutputPaths:  []string{"stderr"},
+	}
+
+	logger, err := config.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	r.logger = logger
+
+	zap.ReplaceGlobals(logger)
+
+	return r.logger, nil
 }
 
 // RegisterStoreListener resolver method

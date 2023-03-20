@@ -8,12 +8,15 @@ import (
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/api"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
+	"go.uber.org/zap"
 )
 
 const port int = 9999
 
+var logger = zap.NewNop()
+
 func Test_NewServer(t *testing.T) {
-	server := api.NewServer(kyverno.NewPolicyStore(), &policyReportGeneratorStub{}, port, func() bool { return true })
+	server := api.NewServer(kyverno.NewPolicyStore(), &policyReportGeneratorStub{}, port, func() bool { return true }, logger)
 
 	server.RegisterMetrics()
 	server.RegisterREST()

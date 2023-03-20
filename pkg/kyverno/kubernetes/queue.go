@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -139,7 +139,7 @@ func (q *Queue) handleErr(err error, key interface{}) {
 	}
 
 	if q.queue.NumRequeues(key) < 5 {
-		log.Printf("[ERROR] process report %v: %v", key, err)
+		zap.L().Error("process report", zap.Any("report", key), zap.Error(err))
 
 		q.queue.AddRateLimited(key)
 		return
@@ -148,7 +148,7 @@ func (q *Queue) handleErr(err error, key interface{}) {
 	q.queue.Forget(key)
 
 	runtime.HandleError(err)
-	log.Printf("[WARNING] Dropping report %q out of the queue: %v", key, err)
+	zap.L().Warn("dropping report out of the queue", zap.Any("report", key), zap.Error(err))
 }
 
 func NewQueue(publisher *kyverno.EventPublisher, queue workqueue.RateLimitingInterface, client kyvernoV1.KyvernoV1Interface, dClient dynamic.Interface) *Queue {

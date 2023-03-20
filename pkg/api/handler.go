@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"path"
 
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/kyverno"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
+	"go.uber.org/zap"
 )
 
 var funcMap = template.FuncMap{
@@ -143,7 +143,7 @@ func HealthzHandler(synced func() bool) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusServiceUnavailable)
 
-			log.Println("[WARNING] - Healthz Check: No kyverno policy crds are found")
+			zap.L().Warn("Healthz Check: No kyverno policy crds are found")
 
 			fmt.Fprint(w, `{ "error": "No policy CRDs found" }`)
 
