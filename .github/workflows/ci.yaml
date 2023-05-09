@@ -34,7 +34,8 @@ jobs:
         shell: bash
         run: 'set -x && curl -sLf "https://github.com/jandelgado/gcov2lcov/releases/latest/download/gcov2lcov-linux-amd64.tar.gz" | tar zxf - --strip 1'
         working-directory: /tmp
-      - shell: bash
+      - name: Convert coverage to lcov
+        shell: bash
         run: '/tmp/gcov2lcov-linux-amd64 -infile "coverage.out" -outfile "coverage.lcov"'
         env:
           GOROOT: /opt/hostedtoolcache/go/1.20.4/x64
