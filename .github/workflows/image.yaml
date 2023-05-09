@@ -45,6 +45,7 @@ jobs:
 
       - name: Build image and push to GitHub Container Registry
         uses: docker/build-push-action@v3
+        id: push
         with:
           push: true
           platforms: linux/arm64,linux/amd64,linux/s390x
