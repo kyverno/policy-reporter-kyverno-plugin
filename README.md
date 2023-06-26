@@ -7,7 +7,7 @@ This Plugin for [Policy Reporter](https://github.com/kyverno/policy-reporter) br
 
 ## Documentation
 
-See the <a href="https://kyverno.github.io/policy-reporter/kyverno-plugin/14-api-reference" target="_blank">Documentation</a> for details.
+See the [Documentation](https://kyverno.github.io/policy-reporter/kyverno-plugin/api-reference) for details.
 
 ## Screenshots from Policy Reporter UI
 
