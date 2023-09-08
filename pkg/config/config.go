@@ -1,9 +1,17 @@
 package config
 
+// BasicAuth configuration
+type BasicAuth struct {
+	Username  string `mapstructure:"username"`
+	Password  string `mapstructure:"password"`
+	SecretRef string `mapstructure:"secretRef"`
+}
+
 // API configuration
 type API struct {
-	Port    int  `mapstructure:"port"`
-	Logging bool `mapstructure:"logging"`
+	Port      int       `mapstructure:"port"`
+	Logging   bool      `mapstructure:"logging"`
+	BasicAuth BasicAuth `mapstructure:"basicAuth"`
 }
 
 type Logging struct {
@@ -32,7 +40,6 @@ type Results struct {
 type LeaderElection struct {
 	LockName        string `mapstructure:"lockName"`
 	PodName         string `mapstructure:"podName"`
-	Namespace       string `mapstructure:"namespace"`
 	LeaseDuration   int    `mapstructure:"leaseDuration"`
 	RenewDeadline   int    `mapstructure:"renewDeadline"`
 	RetryPeriod     int    `mapstructure:"retryPeriod"`
@@ -57,4 +64,5 @@ type Config struct {
 	BlockReports   BlockReports   `mapstructure:"blockReports"`
 	LeaderElection LeaderElection `mapstructure:"leaderElection"`
 	Logging        Logging        `mapstructure:"logging"`
+	Namespace      string         `mapstructure:"namespace"`
 }

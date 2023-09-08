@@ -16,7 +16,7 @@ const port int = 9999
 var logger = zap.NewNop()
 
 func Test_NewServer(t *testing.T) {
-	server := api.NewServer(kyverno.NewPolicyStore(), &policyReportGeneratorStub{}, port, func() bool { return true }, logger)
+	server := api.NewServer(kyverno.NewPolicyStore(), &policyReportGeneratorStub{}, port, func() bool { return true }, nil, logger)
 
 	server.RegisterMetrics()
 	server.RegisterREST()

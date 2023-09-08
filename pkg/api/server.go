@@ -32,6 +32,7 @@ type httpServer struct {
 	reports reporting.PolicyReportGenerator
 	http    http.Server
 	synced  func() bool
+	auth    *BasicAuth
 }
 
 func (s *httpServer) registerHandler() {
@@ -39,15 +40,32 @@ func (s *httpServer) registerHandler() {
 	s.mux.HandleFunc("/ready", ReadyHandler())
 }
 
+func (s *httpServer) middleware(handler http.HandlerFunc) http.HandlerFunc {
+	handler = Gzip(handler)
+
+	if s.auth != nil {
+		handler = HTTPBasic(s.auth, handler)
+	}
+
+	return handler
+}
+
 func (s *httpServer) RegisterMetrics() {
-	s.mux.Handle("/metrics", promhttp.Handler())
+	handler := promhttp.Handler()
+
+	if s.auth != nil {
+		s.mux.HandleFunc("/metrics", HTTPBasic(s.auth, handler.ServeHTTP))
+		return
+	}
+
+	s.mux.Handle("/metrics", handler)
 }
 
 func (s *httpServer) RegisterREST() {
-	s.mux.HandleFunc("/policies", Gzip(PolicyHandler(s.store)))
-	s.mux.HandleFunc("/verify-image-rules", Gzip(VerifyImageRulesHandler(s.store)))
-	s.mux.HandleFunc("/namespace-details-reporting", Gzip(NamespaceReportingHandler(s.reports, path.Join("templates", "reporting"))))
-	s.mux.HandleFunc("/policy-details-reporting", Gzip(PolicyReportingHandler(s.reports, path.Join("templates", "reporting"))))
+	s.mux.HandleFunc("/policies", s.middleware(PolicyHandler(s.store)))
+	s.mux.HandleFunc("/verify-image-rules", s.middleware(VerifyImageRulesHandler(s.store)))
+	s.mux.HandleFunc("/namespace-details-reporting", s.middleware(NamespaceReportingHandler(s.reports, path.Join("templates", "reporting"))))
+	s.mux.HandleFunc("/policy-details-reporting", s.middleware(PolicyReportingHandler(s.reports, path.Join("templates", "reporting"))))
 }
 
 func (s *httpServer) Start() error {
@@ -59,7 +77,7 @@ func (s *httpServer) Shutdown(ctx context.Context) error {
 }
 
 // NewServer constructor for a new API Server
-func NewServer(pStore *kyverno.PolicyStore, reports reporting.PolicyReportGenerator, port int, synced func() bool, logger *zap.Logger) Server {
+func NewServer(pStore *kyverno.PolicyStore, reports reporting.PolicyReportGenerator, port int, synced func() bool, auth *BasicAuth, logger *zap.Logger) Server {
 	mux := http.NewServeMux()
 
 	s := &httpServer{
@@ -67,6 +85,7 @@ func NewServer(pStore *kyverno.PolicyStore, reports reporting.PolicyReportGenera
 		reports: reports,
 		mux:     mux,
 		synced:  synced,
+		auth:    auth,
 		http: http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: NewLoggerMiddleware(logger, mux),

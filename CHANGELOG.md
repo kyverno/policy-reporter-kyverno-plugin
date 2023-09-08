@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0
+
+* Support BasicAuth for REST APIs and metrics
+
 ## 1.5.1
 
 * Add zap.Logger
