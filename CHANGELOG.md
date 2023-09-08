@@ -3,6 +3,7 @@
 ## 1.6.0
 
 * Support BasicAuth for REST APIs and metrics
+* Update to Go 1.21
 
 ## 1.5.1
 

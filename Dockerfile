@@ -1,4 +1,4 @@
-FROM golang:1.20 as builder
+FROM golang:1.21 as builder
 
 ARG LD_FLAGS="-s -w"
 ARG TARGETPLATFORM
@@ -17,7 +17,7 @@ RUN go env
 RUN CGO_ENABLED=0 go build -ldflags="${LD_FLAGS}" -o /app/build/kyverno-plugin -v
 
 FROM scratch
-LABEL MAINTAINER "Frank Jogeleit <frank.jogeleit@gweb.de>"
+LABEL MAINTAINER "Frank Jogeleit <frank.jogeleit@web.de>"
 
 WORKDIR /app
 

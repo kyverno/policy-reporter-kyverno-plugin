@@ -1,6 +1,6 @@
 module github.com/kyverno/policy-reporter-kyverno-plugin
 
-go 1.19
+go 1.21
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
