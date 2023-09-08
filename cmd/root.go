@@ -77,7 +77,8 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	if err := v.BindEnv("leaderElection.podName", "POD_NAME"); err != nil {
 		zap.L().Warn("failed to bind env POD_NAME")
 	}
-	if err := v.BindEnv("leaderElection.namespace", "POD_NAMESPACE"); err != nil {
+
+	if err := v.BindEnv("namespace", "POD_NAMESPACE"); err != nil {
 		zap.L().Warn("failed to bind env POD_NAMESPACE")
 	}
 

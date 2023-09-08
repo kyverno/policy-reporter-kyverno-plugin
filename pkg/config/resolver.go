@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
@@ -22,6 +23,7 @@ import (
 	prk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/policyreport/kubernetes"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting"
 	rk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/reporting/kubernetes"
+	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/secrets"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation"
 	vk8s "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/violation/kubernetes"
 )
@@ -42,11 +44,37 @@ type Resolver struct {
 	logger       *zap.Logger
 }
 
+// SecretClient resolver method
+func (r *Resolver) SecretClient() (secrets.Client, error) {
+	clientset, err := r.Clientset()
+	if err != nil {
+		zap.L().Error("failed to create secret client, secretRefs can not be resolved", zap.Error(err))
+		return nil, err
+	}
+
+	return secrets.NewClient(clientset.CoreV1().Secrets(r.config.Namespace)), nil
+}
+
 // APIServer resolver method
-func (r *Resolver) APIServer(synced func() bool) api.Server {
+func (r *Resolver) APIServer(ctx context.Context, synced func() bool) api.Server {
 	var logger *zap.Logger
 	if r.config.API.Logging {
 		logger, _ = r.Logger()
+	}
+
+	authConfig := &r.config.API.BasicAuth
+	if authConfig.SecretRef != "" {
+		r.loadSecretRef(ctx, authConfig)
+	}
+
+	var auth *api.BasicAuth
+	if authConfig.Username != "" && authConfig.Password != "" {
+		auth = &api.BasicAuth{
+			Username: authConfig.Username,
+			Password: authConfig.Password,
+		}
+
+		zap.L().Info("API BasicAuth enabled")
 	}
 
 	return api.NewServer(
@@ -54,6 +82,7 @@ func (r *Resolver) APIServer(synced func() bool) api.Server {
 		r.Reporting(),
 		r.config.API.Port,
 		synced,
+		auth,
 		logger,
 	)
 }
@@ -185,7 +214,7 @@ func (r *Resolver) LeaderElectionClient() (*leaderelection.Client, error) {
 	r.leaderClient = leaderelection.New(
 		clientset.CoordinationV1(),
 		r.config.LeaderElection.LockName,
-		r.config.LeaderElection.Namespace,
+		r.config.Namespace,
 		r.config.LeaderElection.PodName,
 		time.Duration(r.config.LeaderElection.LeaseDuration)*time.Second,
 		time.Duration(r.config.LeaderElection.RenewDeadline)*time.Second,
@@ -303,6 +332,24 @@ func (r *Resolver) RegisterStoreListener() {
 // RegisterMetricsListener resolver method
 func (r *Resolver) RegisterMetricsListener() {
 	r.EventPublisher().RegisterListener(listener.NewPolicyMetricsListener())
+}
+
+func (r *Resolver) loadSecretRef(ctx context.Context, auth *BasicAuth) {
+	client, err := r.SecretClient()
+	if err != nil {
+		return
+	}
+	values, err := client.Get(ctx, auth.SecretRef)
+	if err != nil {
+		zap.L().Error("failed to load basic auth secret", zap.Error(err))
+	}
+
+	if values.Username != "" {
+		auth.Username = values.Username
+	}
+	if values.Password != "" {
+		auth.Password = values.Password
+	}
 }
 
 // NewResolver constructor function

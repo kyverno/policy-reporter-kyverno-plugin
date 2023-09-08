@@ -44,7 +44,7 @@ func newRunCMD() *cobra.Command {
 				return err
 			}
 
-			server := resolver.APIServer(policyClient.HasSynced)
+			server := resolver.APIServer(cmd.Context(), policyClient.HasSynced)
 
 			if c.REST.Enabled || c.BlockReports.Enabled {
 				resolver.RegisterStoreListener()
