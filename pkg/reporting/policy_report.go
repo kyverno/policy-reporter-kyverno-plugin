@@ -132,12 +132,12 @@ func (g *policyReportGenerator) PerPolicyData(ctx context.Context, filter Filter
 		data = append(data, v)
 	}
 
-	slices.SortFunc(data, func(a, b *Validation) bool {
+	slices.SortFunc(data, func(a, b *Validation) int {
 		if a.Policy.Category != b.Policy.Category {
-			return a.Policy.Category < b.Policy.Category
+			return strings.Compare(a.Policy.Category, b.Policy.Category)
 		}
 
-		return a.Name < b.Name
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	return data, nil
@@ -255,8 +255,8 @@ func (g *policyReportGenerator) PerNamespaceData(ctx context.Context, filter Fil
 		data = append(data, v)
 	}
 
-	slices.SortFunc(data, func(a, b *Validation) bool {
-		return a.Name < b.Name
+	slices.SortFunc(data, func(a, b *Validation) int {
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	return data, nil
