@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"golang.org/x/exp/slices"
+	corev1 "k8s.io/api/core/v1"
 
 	v1 "github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/kyverno/v1"
 	"github.com/kyverno/policy-reporter-kyverno-plugin/pkg/crd/api/policyreport/v1alpha2"
@@ -115,6 +116,8 @@ func (g *policyReportGenerator) PerPolicyData(ctx context.Context, filter Filter
 
 			if len(result.Resources) > 0 {
 				val.Groups[polr.GetNamespace()].Rules[rule].Resources = append(val.Groups[polr.GetNamespace()].Rules[rule].Resources, mapResource(result))
+			} else if polr.GetScope() != nil {
+				val.Groups[polr.GetNamespace()].Rules[rule].Resources = append(val.Groups[polr.GetNamespace()].Rules[rule].Resources, mapScope(result.Result, polr.GetScope()))
 			}
 
 			increaseSummary(result.Result, val.Groups[polr.GetNamespace()].Rules[rule].Summary)
@@ -238,11 +241,12 @@ func (g *policyReportGenerator) PerNamespaceData(ctx context.Context, filter Fil
 
 			if len(result.Resources) > 0 {
 				ruleObj.Resources = append(ruleObj.Resources, mapResource(result))
+			} else if polr.GetScope() != nil {
+				ruleObj.Resources = append(ruleObj.Resources, mapScope(result.Result, polr.GetScope()))
 			}
 
 			increaseSummary(result.Result, ruleObj.Summary)
 			increaseSummary(result.Result, val.Groups[result.Policy].Summary)
-
 		}
 	}
 
@@ -316,6 +320,15 @@ func mapResource(result v1alpha2.PolicyReportResult) *Resource {
 		APIVersion: result.Resources[0].APIVersion,
 		Name:       result.Resources[0].Name,
 		Status:     string(result.Result),
+	}
+}
+
+func mapScope(result v1alpha2.PolicyResult, resource *corev1.ObjectReference) *Resource {
+	return &Resource{
+		Kind:       resource.Kind,
+		APIVersion: resource.APIVersion,
+		Name:       resource.Name,
+		Status:     string(result),
 	}
 }
 
