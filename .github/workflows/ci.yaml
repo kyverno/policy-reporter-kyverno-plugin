@@ -20,27 +20,26 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.20
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.20.4
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
       - name: Get dependencies
         run: go get -v -t -d ./...
+
       - name: Calc coverage
         run: make coverage
-      - name: Download gcov2lcov
-        shell: bash
-        run: 'set -x && curl -sLf "https://github.com/jandelgado/gcov2lcov/releases/latest/download/gcov2lcov-linux-amd64.tar.gz" | tar zxf - --strip 1'
-        working-directory: /tmp
+
       - name: Convert coverage to lcov
-        shell: bash
-        run: '/tmp/gcov2lcov-linux-amd64 -infile "coverage.out" -outfile "coverage.lcov"'
-        env:
-          GOROOT: /opt/hostedtoolcache/go/1.20.4/x64
+        uses: jandelgado/gcov2lcov-action@v1.0.9
+
       - name: Coveralls
-        uses: coverallsapp/github-action@v1.1.2
+        uses: coverallsapp/github-action@v2.0.0
         with:
           github-token: ${{ secrets.github_token }}
-          path-to-lcov: coverage.lcov
+          file: coverage.lcov
